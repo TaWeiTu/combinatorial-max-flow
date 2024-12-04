@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -g -fsanitize=undefined")
 
 file(GLOB TEST_SRC_FILES "tests/*.cc")
+file(GLOB SRC_FILES "src/*.cc")
+
+add_library(combflow "${SRC_FILES}")
 
 Include(FetchContent)
 
@@ -20,7 +23,7 @@ FetchContent_MakeAvailable(Catch2)
 set(CMAKE_SKIP_TEST_ALL_DEPENDENCY OFF)
 
 add_executable(tests "${TEST_SRC_FILES}")
-target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(tests PRIVATE combflow Catch2::Catch2WithMain)
 
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 include(CTest)
