@@ -33,8 +33,15 @@ struct U {
   };
 };
 
+auto DropWhile(auto &v, auto &&pred) -> optional<decay_t<decltype(v.front())>> {
+  while (!empty(v) && pred(v.front())) v.pop();
+  if (empty(v)) return {};
+  return v.front();
+};
+
 }  // namespace
 
+// implements [Algorithm 1, https://arxiv.org/pdf/2406.03648]
 pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
                                                        vector<CapacityT> demand,
                                                        const vector<WeightT> w,
@@ -82,6 +89,20 @@ pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
     assert(false && "flow value not in tree");
   };
 
+  auto NextNeedRelabel = [&] {
+    return DropWhile(todo,
+                     [&](auto v) { return dead[v] || parent[v] != kMissing; });
+  };
+  auto NextSource = [&] {
+    return DropWhile(sources,
+                     [&](auto v) { return dead[v] || demand[v] == 0; });
+  };
+  auto NextAdmissibleOut = [&](Vertex v) {
+    return DropWhile(admissible_out[v], [&](auto e) {
+      return is_admissible[e.first] != e.second;
+    });
+  };
+
   // Mark an edge e as admissible / inadmissible
   // dir = kNone for inadmissible
   // dir = kForward to mark forward(e) as admissible
@@ -93,29 +114,19 @@ pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
     if (dir == kBackward) admissible_out[g.head[e]].emplace(e, dir);
 
     for (auto v : {g.tail[e], g.head[e]}) {
-      while (!empty(admissible_out[v])) {
-        auto [f, d] = admissible_out[v].front();
-        if (is_admissible[f] == d) break;
-        admissible_out[v].pop();
-      }
-      pair<Edge, Direction> new_parent =
-          empty(admissible_out[v]) ? kMissing : admissible_out[v].front();
-
+      DirectedEdge new_parent = NextAdmissibleOut(v).value_or(kMissing);
       if (new_parent == parent[v]) continue;
 
-      if (parent[v] != kMissing) {
+      if (parent[v] != kMissing) {  // remove old edge from tree
         auto [e, dir] = parent[v];
-        auto value = link_cut_tree.QueryParentEdge(v);
-        assert(value.bottleneck == parent[v]);
         assert(flow[e] == kFlowMissing);
-        flow[e] =
-            dir == kForward ? g.capacity[e] - value.min_cap : value.min_cap;
+        flow[e] = FlowOnEdge(e);
         link_cut_tree.CutParent(v);
         todo.emplace(v);
       }
 
       parent[v] = new_parent;
-      if (parent[v] != kMissing) {
+      if (parent[v] != kMissing) {  // add new edge to tree
         auto [e, dir] = parent[v];
         V value{dir == kForward ? g.capacity[e] - flow[e] : flow[e], {e, dir}};
         link_cut_tree.Link(v, Head(value.bottleneck));
@@ -144,27 +155,12 @@ pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
     }
   };
 
-  auto DropWhile = [](auto &v, auto &&pred) -> std::optional<Vertex> {
-    while (!empty(v) && pred(v.front())) v.pop();
-    if (empty(v)) return {};
-    return v.front();
-  };
-  auto NextNeedRelabel = [&] {
-    return DropWhile(todo,
-                     [&](auto v) { return dead[v] || parent[v] != kMissing; });
-  };
-  auto NextSource = [&] {
-    return DropWhile(sources,
-                     [&](auto v) { return dead[v] || demand[v] == 0; });
-  };
-
   CapacityT flow_value = 0;
 
   while (true) {
     while (auto ov = NextNeedRelabel()) Relabel(*ov);
 
-    if (auto os = NextSource()) {
-      // Augment along s -> t path
+    if (auto os = NextSource()) {  // Augment along s -> t path
       Vertex s = *os, t = link_cut_tree.GetRoot(s);
       auto c_augment = min(
           {demand[s], -demand[t], link_cut_tree.QueryPathToRoot(s).min_cap});
@@ -183,12 +179,10 @@ pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
         SetAdmissible(v.bottleneck.first, kNone);
         s = Head(v.bottleneck);
       }
-    } else
-      break;
+    } else {
+      // make sure to remove edges from lct to compute their flow values
+      for (Edge e : g.Edges()) SetAdmissible(e, kNone);
+      return {flow_value, flow};
+    }
   }
-
-  // make sure to remove edges from lct to compute their flow values
-  for (Edge e : g.Edges()) SetAdmissible(e, kNone);
-
-  return {flow_value, flow};
 }
