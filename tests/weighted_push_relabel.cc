@@ -19,7 +19,7 @@ TEST_CASE("weighted push relabel small fixed graph", "[wpr]") {
   REQUIRE(flow == vector<CapacityT>{3, 4, 4});
 }
 
-TEST_CASE("weighted push relabel random graphs", "[wpr]") {
+TEST_CASE("weighted push relabel stress", "[wpr][stress]") {
   mt19937_64 rng(Catch::rngSeed());
   auto random_vector = [&](int n, auto lo, auto hi) {  // in [lo,hi)
     vector<decltype(lo)> v(n);
