@@ -1,10 +1,12 @@
-#include "../src/naive_link_cut_tree.h"
+#include "../src/link_cut_tree.h"
 
 #include <catch2/catch_all.hpp>
 
+#include "../src/naive_link_cut_tree.h"
+
 using namespace std;
 
-namespace sum_size_increment {
+namespace {
 struct V {
   int val = 0;
   int sz = 0;
@@ -14,14 +16,16 @@ struct V {
 };
 struct U {
   int x = 0;
+  U() = default;
+  U(int x) : x(x) {}
   static V Apply(U a, V b) { return V{a.x * b.sz + b.val, b.sz}; }
   static U Compose(U a, U b) { return U(a.x + b.x); }
 };
-}  // namespace sum_size_increment
+}  // namespace
 
-TEST_CASE("naive link cut tree", "[lct]") {
-  using namespace sum_size_increment;
-  NaiveLinkCutTree<U, V> lct(10);
+TEMPLATE_TEST_CASE("link cut tree", "[lct]", (LinkCutTree<U, V>),
+                   (NaiveLinkCutTree<U, V>)) {
+  TestType lct(10);
 
   lct.Link(3, 2);
   lct.SetParentEdge(3, {10000, 1});

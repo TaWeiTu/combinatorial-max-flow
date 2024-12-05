@@ -162,7 +162,7 @@ pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
 
     if (auto os = NextSource()) {  // Augment along s -> t path
       Vertex s = *os, t = link_cut_tree.GetRoot(s);
-      auto c_augment = min(
+      auto c_augment = std::min(
           {demand[s], -demand[t], link_cut_tree.QueryPathToRoot(s).min_cap});
 
       assert(c_augment > 0);

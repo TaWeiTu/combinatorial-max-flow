@@ -8,7 +8,7 @@
 template <typename U, typename V>
 class NaiveLinkCutTree : public LinkCutTree<U, V> {
  public:
-  NaiveLinkCutTree(int n) : values_(n), parent_(n, -1) {}
+  NaiveLinkCutTree(int n) : LinkCutTree<U, V>(n), values_(n), parent_(n, -1) {}
 
   void Link(Vertex c, Vertex p) {
     assert(parent_[c] == -1);
