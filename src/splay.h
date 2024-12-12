@@ -28,11 +28,7 @@ struct SplayNode {
 
   void Push() {
     for (int d : {0, 1}) {
-      if (child[d]) {
-        child[d]->value = U::Apply(update, child[d]->value);
-        child[d]->aggregation = U::Apply(update, child[d]->aggregation);
-        child[d]->update = U::Compose(child[d]->update, update);
-      }
+      if (child[d]) child[d]->Update(update);
     }
     update = U();
   }
@@ -78,16 +74,11 @@ struct SplayNode {
         Rotate();
       }
     }
-  }
-
-  void Evert() {
-    Access();
-    Splay();
+    Push();
   }
 
   void Expose() {
     Splay();
-    Push();
     if (child[1]) {
       child[1]->fa = nullptr;
       child[1]->pfa = this;
@@ -113,8 +104,6 @@ struct SplayNode {
     Expose();
     while (Splice());
   }
-
-  V Query() const { return aggregation; }
 
   void Update(U new_update) {
     value = U::Apply(new_update, value);
