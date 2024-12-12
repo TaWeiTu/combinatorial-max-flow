@@ -6,7 +6,7 @@
 #include <queue>
 
 #include "graph.h"
-#include "naive_link_cut_tree.h"
+#include "link_cut_tree.h"
 
 using namespace std;
 
@@ -74,7 +74,7 @@ pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
   vector<DirectedEdge> parent(g.n, kMissing);
 
   // TODO use actual fast link cut tree implementation
-  auto link_cut_tree = NaiveLinkCutTree<U, V>(g.n);
+  auto link_cut_tree = LinkCutTree<U, V>(g.n);
 
   auto Head = [&](DirectedEdge e) -> Vertex {
     return e.second == kForward ? g.head[e.first] : g.tail[e.first];
@@ -128,9 +128,8 @@ pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
       parent[v] = new_parent;
       if (parent[v] != kMissing) {  // add new edge to tree
         auto [e, dir] = parent[v];
-        V value{dir == kForward ? g.capacity[e] - flow[e] : flow[e], {e, dir}};
-        link_cut_tree.Link(v, Head(value.bottleneck));
-        link_cut_tree.SetParentEdge(v, value);
+        V data{dir == kForward ? g.capacity[e] - flow[e] : flow[e], {e, dir}};
+        link_cut_tree.Link(v, Head(data.bottleneck), data);
         flow[e] = kFlowMissing;
       }
     }

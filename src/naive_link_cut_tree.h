@@ -10,23 +10,22 @@ class NaiveLinkCutTree : public LinkCutTree<U, V> {
  public:
   NaiveLinkCutTree(int n) : LinkCutTree<U, V>(n), values_(n), parent_(n, -1) {}
 
-  void Link(Vertex c, Vertex p) {
+  void Link(Vertex c, Vertex p, V edge_value) {
     assert(parent_[c] == -1);
     parent_[c] = p;
+    values_[c] = edge_value;
   }
 
   void CutParent(Vertex u) {
     assert(parent_[u] != -1);
     parent_[u] = -1;
-    SetParentEdge(u, V());
+    values_[u] = V();
   }
 
   Vertex GetRoot(Vertex u) {
     for (; parent_[u] != -1; u = parent_[u]);
     return u;
   }
-
-  void SetParentEdge(Vertex u, V value) { values_[u] = value; };
 
   V QueryParentEdge(Vertex u) { return values_[u]; };
 

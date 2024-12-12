@@ -25,11 +25,13 @@ class LinkCutTree {
     }
   }
 
-  virtual void Link(Vertex child, Vertex parent) {
+  virtual void Link(Vertex child, Vertex parent, V edge_value) {
     nodes_[child]->Access();
     nodes_[parent]->Access();
     assert(!nodes_[child]->pfa && !nodes_[child]->fa);
     nodes_[child]->pfa = nodes_[parent].get();
+    nodes_[child]->value = edge_value;
+    nodes_[child]->Pull();
   }
 
   virtual void CutParent(Vertex u) {
@@ -48,12 +50,6 @@ class LinkCutTree {
     while (p->child[0]) p = p->child[0];
     p->Splay();
     return p->id;
-  }
-
-  virtual void SetParentEdge(Vertex u, V value) {
-    nodes_[u]->Splay();
-    nodes_[u]->value = value;
-    nodes_[u]->Pull();
   }
 
   virtual V QueryParentEdge(Vertex u) {

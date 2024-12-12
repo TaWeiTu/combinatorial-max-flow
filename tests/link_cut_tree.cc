@@ -30,14 +30,10 @@ TEMPLATE_TEST_CASE("link cut tree", "[lct]",
                    (NaiveLinkCutTree<sum_increment::U, sum_increment::V>)) {
   TestType lct(10);
 
-  lct.Link(3, 2);
-  lct.SetParentEdge(3, {10000, 1});
-  lct.Link(4, 3);
-  lct.SetParentEdge(4, {1000, 1});
-  lct.Link(5, 3);
-  lct.SetParentEdge(5, {100, 1});
-  lct.Link(6, 5);
-  lct.SetParentEdge(6, {10, 1});
+  lct.Link(3, 2, {10000, 1});
+  lct.Link(4, 3, {1000, 1});
+  lct.Link(5, 3, {100, 1});
+  lct.Link(6, 5, {10, 1});
 
   // 6 -> 5 -> 3 -> 2
   //      4 ---^
@@ -120,10 +116,8 @@ TEST_CASE("link cut tree stress", "[lct][stress]") {
       if (type < 5) {  // Link
         if (naive.GetRoot(u) != u || naive.GetRoot(v) == u) continue;
         V data{{{-(++uid)}}};
-        naive.Link(u, v);
-        lct.Link(u, v);
-        naive.SetParentEdge(u, data);
-        lct.SetParentEdge(u, data);
+        naive.Link(u, v, data);
+        lct.Link(u, v, data);
       } else if (type == 5) {  // CutParent
         if (naive.GetRoot(u) == u) continue;
         naive.CutParent(u);
@@ -145,10 +139,8 @@ TEST_CASE("link cut tree stress", "[lct][stress]") {
   SECTION("path") {
     for (int i : views::iota(1, n)) {
       V data{{{-(++uid)}}};
-      naive.Link(i, i - 1);
-      lct.Link(i, i - 1);
-      naive.SetParentEdge(i, data);
-      lct.SetParentEdge(i, data);
+      naive.Link(i, i - 1, data);
+      lct.Link(i, i - 1, data);
     }
     for ([[maybe_unused]] auto _ : views::iota(1, 100)) {
       Vertex u = rng() % n;
