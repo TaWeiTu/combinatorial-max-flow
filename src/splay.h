@@ -1,5 +1,8 @@
 #pragma once
 
+#include <initializer_list>
+#include <utility>
+
 #include "types.h"
 
 namespace splay {
@@ -13,21 +16,14 @@ struct SplayNode {
 
   template <typename... Args>
   SplayNode(Vertex id, Args &&...args)
-      : id(id),
-        fa(nullptr),
-        pfa(nullptr),
-        value(args...),
-        aggregation(value) {
+      : id(id), fa(nullptr), pfa(nullptr), value(args...), aggregation(value) {
     child[0] = child[1] = nullptr;
   }
 
   void Pull() {
     aggregation = value;
-    for (int d : {0, 1}) {
-      if (child[d]) {
-        aggregation = aggregation + child[d]->aggregation;
-      }
-    }
+    if (child[0]) aggregation = aggregation + child[0]->aggregation;
+    if (child[1]) aggregation = child[1]->aggregation + aggregation;
   }
 
   void Push() {

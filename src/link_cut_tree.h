@@ -21,7 +21,7 @@ class LinkCutTree {
  public:
   LinkCutTree(int n) : nodes_(n), parents_(n, -1) {
     for (int i = 0; i < n; ++i) {
-      nodes_[i] = new splay::SplayNode<U, V>(i);
+      nodes_[i] = std::make_unique<splay::SplayNode<U, V>>(i);
     }
   }
 
@@ -33,8 +33,8 @@ class LinkCutTree {
     nodes_[child]->Access();
     nodes_[child]->Splay();
     nodes_[child]->Push();
-    nodes_[child]->pfa = nodes_[parent];
     parents_[child] = parent;
+    nodes_[child]->pfa = nodes_[parent].get();
   }
 
   virtual void CutParent(Vertex u) {
@@ -43,6 +43,7 @@ class LinkCutTree {
     nodes_[u]->Access();
     nodes_[u]->Splay();
     nodes_[u]->Push();
+    assert(nodes_[u]->child[0]);
     nodes_[u]->value = V();
     nodes_[u]->child[0]->fa = nullptr;
     nodes_[u]->child[0] = nullptr;
@@ -52,17 +53,11 @@ class LinkCutTree {
   }
 
   virtual Vertex GetRoot(Vertex u) {
-    nodes_[u]->Access();
-    nodes_[u]->Splay();
-    splay::SplayNode<U, V>* p = nodes_[u];
-    while (true) {
-      p->Push();
-      if (p->child[0]) {
-        p = p->child[0];
-      } else {
-        break;
-      }
-    }
+    auto p = nodes_[u].get();
+    p->Access();
+    p->Splay();
+    while (p->child[0]) p = p->child[0];
+    p->Splay();
     return p->id;
   }
 
@@ -91,6 +86,6 @@ class LinkCutTree {
   }
 
  private:
-  std::vector<splay::SplayNode<U, V>*> nodes_;
+  std::vector<std::unique_ptr<splay::SplayNode<U, V>>> nodes_;
   std::vector<Vertex> parents_;
 };
