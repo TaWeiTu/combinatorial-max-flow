@@ -1,6 +1,6 @@
-
 #include "weighted_push_relabel.h"
 
+#include <algorithm>
 #include <cassert>
 #include <limits>
 #include <queue>
