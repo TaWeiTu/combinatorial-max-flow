@@ -73,7 +73,6 @@ pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
   vector<queue<DirectedEdge>> admissible_out(g.n);
   vector<DirectedEdge> parent(g.n, kMissing);
 
-  // TODO use actual fast link cut tree implementation
   auto link_cut_tree = LinkCutTree<U, V>(g.n);
 
   auto Head = [&](DirectedEdge e) -> Vertex {

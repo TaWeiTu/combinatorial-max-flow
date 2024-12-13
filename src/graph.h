@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <ranges>
 #include <vector>
 
@@ -42,3 +43,5 @@ struct Graph {
 
   Graph Residual(const std::vector<CapacityT>& flow) const;
 };
+
+std::ostream& operator<<(std::ostream& os, const Graph& g);
