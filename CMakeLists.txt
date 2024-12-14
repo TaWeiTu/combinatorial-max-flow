@@ -3,7 +3,11 @@ project(CombinatorialMaximumFlow LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -g -fsanitize=undefined")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -g")
+
+if(NOT (APPLE AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64"))
+  set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-fsanitize=undefined")
+endif()
 
 file(GLOB TEST_SRC_FILES "tests/*.cc")
 file(GLOB SRC_FILES "src/*.cc")
