@@ -1,11 +1,14 @@
 #pragma once
 
 #include <map>
+#include <utility>
 #include <vector>
 
 #include "graph.h"
 #include "link_cut_tree.h"
 #include "types.h"
+
+using MultiCommodityDemand = std::map<std::pair<Vertex, Vertex>, CapacityT>;
 
 // Flow decomposition
 //
@@ -16,19 +19,12 @@
 class FlowDecomposition {
  public:
   FlowDecomposition(const Graph& g, const std::vector<CapacityT>& flow);
-  std::vector<CapacityT> Route(
-      const std::map<std::pair<Vertex, Vertex>, CapacityT>& subdemand);
+  std::vector<CapacityT> Route(const MultiCommodityDemand& subdemand);
 
-  const std::map<std::pair<Vertex, Vertex>, CapacityT>& Demand() const {
-    return multi_commodity_demand_;
-  }
+  const MultiCommodityDemand& Demand() const { return demand_; }
 
  private:
-  std::map<std::pair<Vertex, Vertex>, CapacityT> multi_commodity_demand_;
+  std::map<std::pair<Vertex, Vertex>, CapacityT> demand_;
   Graph g_;
   std::vector<CapacityT> flow_;
-
-  std::vector<CapacityT> RouteInternal(
-      std::map<std::pair<Vertex, Vertex>, CapacityT> subdemand,
-      bool init = false);
 };
