@@ -29,7 +29,7 @@ std::vector<CapacityT> ToSingleCommodity(
 
 }  // namespace
 
-TEST_CASE("flow decomposition random graphs", "[fd]") {
+TEST_CASE("flow decomposition random graphs", "[fd][stress]") {
   std::mt19937_64 rng(Catch::rngSeed());
   auto random_vector = [&](int n, auto lo, auto hi) {  // in [lo,hi)
     vector<decltype(lo)> v(n);
