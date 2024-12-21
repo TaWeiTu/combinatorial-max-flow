@@ -42,6 +42,18 @@ struct Graph {
   }
 
   Graph Residual(const std::vector<CapacityT>& flow) const;
+  Graph operator*(CapacityT scale) const;
+
+  template <typename F>
+  Graph EdgeSubgraph(F&& pred) const {
+    std::vector<std::tuple<Vertex, Vertex, CapacityT>> edges;
+    for (Edge e : Edges()) {
+      if (pred(e)) edges.emplace_back(tail[e], head[e], capacity[e]);
+    }
+    return Graph::FromEdgeList(n, edges);
+  }
+
+  std::vector<int> SCC() const;
 };
 
 std::ostream& operator<<(std::ostream& os, const Graph& g);
