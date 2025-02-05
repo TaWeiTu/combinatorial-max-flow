@@ -69,7 +69,7 @@ struct Graph {
       for (Edge e : out_edges[v]) {
         if (order.find(head[e]) != order.end()) {
           edge_list.push_back(e);
-          subgraph.AddEdge(tail[e], head[e], capacity[e]);
+          subgraph.AddEdge(order[tail[e]], order[head[e]], capacity[e]);
         }
       }
     }

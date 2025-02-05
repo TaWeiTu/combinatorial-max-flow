@@ -49,3 +49,34 @@ TEST_CASE("strongly connected components", "[scc][stress]") {
     }
   }
 }
+
+TEST_CASE("respecting order", "[order]") {
+  SECTION("path") {
+    Graph g =
+        Graph::FromEdgeList(5, {{0, 1, 0}, {1, 2, 0}, {2, 4, 0}, {4, 3, 0}});
+    {
+      auto order = RespectingOrder(g, {0, 0, 0, 0, 0});
+      REQUIRE(order == std::vector{0, 1, 2, 4, 3});
+    }
+    {
+      auto order = RespectingOrder(g, {0, 0, 1, 0, 0});
+      REQUIRE(order == std::vector{0, 1, 2, 4, 3});
+    }
+    {
+      auto order = RespectingOrder(g, {0, 0, 2, 1, 2});
+      REQUIRE(order == std::vector{0, 1, 2, 4, 3});
+    }
+  }
+
+  Graph g = Graph::FromEdgeList(7, {{0, 1, 0},
+                                    {1, 2, 0},
+                                    {2, 0, 0},
+                                    {2, 3, 0},
+                                    {3, 4, 0},
+                                    {4, 5, 0},
+                                    {5, 3, 0},
+                                    {5, 0, 0},
+                                    {2, 6, 0}});
+  auto order = RespectingOrder(g, {0, 0, 1, 0, 0, 0, 1, 2, 0});
+  REQUIRE(order == std::vector{0, 1, 2, 3, 4, 5, 6});
+}
