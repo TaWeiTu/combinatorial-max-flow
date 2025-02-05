@@ -44,5 +44,8 @@ TEST_CASE("strongly connected components", "[scc][stress]") {
         REQUIRE((closure[x][y] && closure[y][x]) == (scc[x] == scc[y]));
       }
     }
+    for (Edge e : g.Edges()) {
+      REQUIRE(scc[g.tail[e]] <= scc[g.head[e]]);
+    }
   }
 }

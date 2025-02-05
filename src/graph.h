@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <map>
 #include <ranges>
 #include <vector>
 
@@ -53,7 +54,39 @@ struct Graph {
     return Graph::FromEdgeList(n, edges);
   }
 
+  /// Return the vertex subgraph induced by vertices in `s` in O(vol(s)\log n)
+  /// time. Also return which edge in the original graph each edge in the
+  /// subgraph corresopnds to.
+  std::pair<Graph, std::vector<Edge>> VertexSubgraph(
+      const std::vector<Vertex>& s) const {
+    Graph subgraph;
+    std::map<Vertex, Vertex> order;
+    for (Vertex v : s) {
+      order[v] = subgraph.AddVertex();
+    }
+    std::vector<Edge> edge_list;
+    for (Vertex v : s) {
+      for (Edge e : out_edges[v]) {
+        if (order.find(head[e]) != order.end()) {
+          edge_list.push_back(e);
+          subgraph.AddEdge(tail[e], head[e], capacity[e]);
+        }
+      }
+    }
+    return std::make_pair(subgraph, edge_list);
+  }
+
+  // Return a vector of length g.n which indicates the SCC each vertex belongs
+  // to. The SCCs are numbered according to some valid topological order.
   std::vector<int> SCC() const;
 };
 
 std::ostream& operator<<(std::ostream& os, const Graph& g);
+
+// Compute a vertex ordering of `g` that respects the hierarchy induced by
+// `levels`.
+//
+// TODO: Put this function here for now. Can be moved to an appropriate file in
+// the future.
+std::vector<int> RespectingOrder(const Graph& g,
+                                 const std::vector<int>& levels);

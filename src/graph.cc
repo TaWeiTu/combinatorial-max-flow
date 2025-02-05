@@ -1,5 +1,7 @@
 #include "graph.h"
 
+#include <ranges>
+
 std::ostream& operator<<(std::ostream& os, const Graph& g) {
   os << g.n << " " << g.m << "\n";
   for (Edge e : g.Edges()) {
@@ -25,7 +27,8 @@ std::vector<int> Graph::SCC() const {
       Vertex u = head[e];
       if (!vis[u]) self(self, u);
     }
-    order.push_back(v); };
+    order.push_back(v);
+  };
 
   for (Vertex v : Vertices()) {
     if (!vis[v]) Dfs(Dfs, v);
@@ -44,4 +47,53 @@ std::vector<int> Graph::SCC() const {
     if (scc_id[v] == -1) RevDfs(RevDfs, v, num_scc++);
   }
   return scc_id;
+}
+
+namespace {
+
+std::vector<int> RespectingOrderInternal(const Graph& g,
+                                         const std::vector<int>& levels,
+                                         int max_l) {
+  if (max_l == 0) {
+    return std::ranges::to<std::vector<int>>(std::ranges::views::iota(0, g.n));
+  }
+  Graph lower_level_subgraph =
+      g.EdgeSubgraph([&levels, max_l](Edge e) { return levels[e] < max_l; });
+  auto sublevels = std::ranges::to<std::vector<int>>(
+      levels | std::views::filter([max_l](int l) { return l < max_l; }));
+  auto scc = lower_level_subgraph.SCC();
+  const int num_scc = *std::max_element(scc.begin(), scc.end()) + 1;
+  std::vector<std::vector<int>> comps(num_scc);
+  for (Vertex v : lower_level_subgraph.Vertices()) {
+    comps[scc[v]].push_back(v);
+  }
+
+  auto SubList = [&](const auto& lst, const auto& idx) {
+    std::decay_t<decltype(lst)> sublst;
+    for (int i : idx) sublst.push_back(lst[i]);
+    return sublst;
+  };
+
+  std::vector<int> order(g.n);
+  int offset = 0;
+  for (int i = 0; i < num_scc; ++i) {
+    auto [scc_subgraph, subgraph_edges] =
+        lower_level_subgraph.VertexSubgraph(comps[i]);
+    auto scc_subgraph_levels = SubList(sublevels, subgraph_edges);
+    auto subgraph_order =
+        RespectingOrderInternal(scc_subgraph, scc_subgraph_levels, max_l - 1);
+    for (int j = 0; j < scc_subgraph.n; ++j) {
+      order[comps[i][j]] = subgraph_order[j] + offset;
+    }
+    offset += scc_subgraph.n;
+  }
+  return order;
+}
+
+}  // namespace
+
+std::vector<int> RespectingOrder(const Graph& g,
+                                 const std::vector<int>& levels) {
+  return RespectingOrderInternal(
+      g, levels, *std::max_element(levels.begin(), levels.end()) + 1);
 }
