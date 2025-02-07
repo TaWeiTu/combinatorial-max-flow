@@ -184,8 +184,3 @@ pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
     }
   }
 }
-
-std::tuple<CapacityT, std::vector<CapacityT>, std::vector<bool>>
-WeightedPushRelabelOnShortcut(ShortcutGraph g,
-                              std::vector<CapacityT> demand, CapacityT kappa,
-                              CapacityT scale) {}

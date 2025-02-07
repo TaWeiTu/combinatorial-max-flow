@@ -28,6 +28,10 @@ struct Graph {
     in_edges.emplace_back();
     return n++;
   }
+
+  Graph() = default;
+  Graph(int n) : n(n) {}
+
   static Graph FromEdgeList(
       int n, const std::vector<std::tuple<Vertex, Vertex, CapacityT>>& edges) {
     Graph g;
