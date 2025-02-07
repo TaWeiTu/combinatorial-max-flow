@@ -39,7 +39,7 @@ class InternalWitness : public Witness {
   std::vector<CapacityT> Route(const std::vector<CapacityT> &demand) {
     std::vector<std::vector<CapacityT>> subgraph_demand(2);
     for (int i = 0; i < 2; ++i) subgraph_demand[i].resize(subgraphs_[i].g.n);
-    for (Vertex v : sg_.g.Vertices()) {
+    for (Vertex v : sg_.without_shortcut.Vertices()) {
       int s = -1, i = -1;
       for (int j = 0; j < 2; ++j) {
         if (subgraphs_[j].inv_vertex_map.find(v) !=
@@ -195,7 +195,7 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
     std::vector<CapacityT> expanding_demand(g.n);
     for (Edge e : expanding_top_level) {
       expanding_demand[g.tail[e]] += g.capacity[e];
-    expanding_demand[g.head[e]] += g.capacity[e];
+      expanding_demand[g.head[e]] += g.capacity[e];
     }
     // re-run the cut-matching game to construct the witness
     MatchingPlayerImpl expanding_matching_player(sg);

@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <limits>
+#include <list>
 #include <numeric>
 #include <queue>
 
@@ -207,4 +209,112 @@ std::vector<CapacityT> PushRelabelOnExpander(Graph expander, int phi,
     total_demand -= v;
   }
   return flow;
+}
+
+// Implements [Lemma 4.1 (Algorithm 1), TODO: new paper]
+// TODO: note, returns the flow scaled up by scale
+//
+std::tuple<CapacityT, std::vector<CapacityT>, std::vector<bool>>
+WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
+                              CapacityT kappa) {
+  // Run weighted push relabel on the scaled up instance
+  Graph g = sg.shortcut * kappa;
+  auto w = sg.weights;
+  // TODO: check if the demand is already scaled up?
+  demand.resize(g.n);
+  for (auto &d : demand) d *= sg.scale;
+
+  CapacityT total_capacity = 0;
+  for (auto e : g.Edges()) total_capacity += g.capacity[e];
+
+  WeightT h =
+      WeightT(g.n * (6 * sg.L * sg.scale + 100 * kappa * log2(total_capacity)));
+
+  auto [flow_value, flow] = WeightedPushRelabel(g, demand, w, h);
+
+  CapacityT total_demand = std::accumulate(demand.begin(), demand.end(), 0);
+
+  if (flow_value == total_demand) {
+    // TODO: how should the cut look like here? for not just empty vector
+    return {flow_value, flow, {}};
+  }
+
+  // Calculate distance layers S[i]
+
+  std::vector<list<int>> S(h + 2);
+  std::vector<std::pair<int, list<int>::iterator>> where(g.n);
+  for (auto v : g.Vertices()) {
+    where[v] = {h + 1, S[h + 1].emplace(S[h + 1].end(), v)};
+  }
+
+  auto Relax = [&](Vertex v, WeightT d) {
+    if (d < where[v].first) {
+      S[where[v].first].erase(where[v].second);
+      where[v] = {d, S[d].emplace(S[d].end(), v)};
+    }
+  };
+
+  auto residual_demand = demand;
+  for (auto e : g.Edges()) {
+    residual_demand[g.head[e]] += flow[e];
+    residual_demand[g.tail[e]] -= flow[e];
+  }
+
+  for (auto v : g.Vertices()) {  // TODO: remove asserts after testing?
+    assert(abs(residual_demand[v]) <= abs(demand[v]));
+    assert((residual_demand[v]) * (demand[v]) >= 0);
+  }
+
+  for (auto v : g.Vertices()) {
+    if (residual_demand[v] > 0) Relax(v, 0);
+  }
+
+  for (int d : std::views::iota(0, h + 1)) {
+    for (auto v : S[d]) {
+      assert(residual_demand[v] >= 0);
+      for (auto e : g.out_edges[v]) {  // forward edges
+        if (flow[e] == g.capacity[e]) continue;
+        WeightT wf = w[e];
+        // shorten forward DAG edges to wf[e] = 0
+        if (!sg.IsStarEdge(e) && !sg.IsTopLevelEdge(e) &&
+            sg.tau[g.tail[e]] < sg.tau[g.head[e]])
+          wf = 0;
+        Relax(g.head[e], d + wf);
+      }
+      for (auto e : g.in_edges[v]) {  // reverse edges
+        if (flow[e] == 0) continue;
+        Relax(g.tail[e], d + w[e]);
+      }
+    }
+  }
+
+  // Calculate min-capacity layered cut (S[<=i], S[>i])
+  std::vector<CapacityT> vol(h + 2), crossing(h + 2);
+  for (auto e : g.Edges()) {
+    int l = where[g.tail[e]].first;
+    int r = where[g.head[e]].first;
+    if (sg.IsTopLevelEdge(e)) {
+      vol[e] += sg.shortcut.capacity[e];
+    }
+    if (r > l) {
+      crossing[l] += sg.shortcut.capacity[e];
+      crossing[r] -= sg.shortcut.capacity[e];
+    }
+  }
+  partial_sum(vol.begin(), vol.end(), vol.begin());
+  partial_sum(crossing.begin(), crossing.end(), crossing.begin());
+
+  // crossing[i] is now c(E(S[<=i], S[>i]))
+  // vol[i] is now vol[S[<=i]]
+
+  auto best = std::ranges::min(std::views::iota(0, h), {}, [&](int i) {
+    return kappa * crossing[i] - vol[i];
+  });
+  std::vector<bool> left_of_cut(sg.without_shortcut.n);
+  for (int i : std::views::iota(0, best + 1)) {
+    for (auto v : S[i])
+      if (!sg.IsStarVertex(v)) left_of_cut[v] = true;
+  }
+
+  return {flow_value, flow, left_of_cut};
 }

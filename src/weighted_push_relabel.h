@@ -17,10 +17,18 @@ std::pair<CapacityT, std::vector<CapacityT>> WeightedPushRelabel(
 // weighted push-relabel on shortcut graph
 // implements [Lemma 4.1]
 //
-// returns the graph G_A on which the flow algorithm runs and the resulting flow
-// vector in G_A and a cut
+// returns:
+//   1. amount of flow routed (scaled by both sg.scale and kappa).
+//
+//   2. the flow vector: on a kappa-scaled version of the shortcut graph (which
+//   is already scaled up by sg.scale).
+//
+//   3. a cut: vector of length sg.without_shortcut.n, where 1 denotes it is on
+//   the source-side of the cut, and 0 on the sink-side. Note that the cut
+//   vector does not include star-vertices.
+//
 std::tuple<CapacityT, std::vector<CapacityT>, std::vector<bool>>
-WeightedPushRelabelOnShortcut(ShortcutGraph g, std::vector<CapacityT> demand,
+WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
                               CapacityT kappa);
 
 std::vector<CapacityT> PushRelabelOnExpander(Graph expander, int phi,

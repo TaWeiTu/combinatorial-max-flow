@@ -6,10 +6,12 @@
 #include "graph.h"
 
 struct ShortcutGraph {
-  Graph g, shortcut;
+  Graph without_shortcut, shortcut;
   std::vector<int> levels;
+  WeightT L;
   CapacityT scale;
   std::vector<WeightT> weights;
+  std::vector<int> tau;  // topological order
   // map each edge in the shortcut graph to the original graph, or -1 if it is a
   // star edge.
   std::vector<Edge> edge_map;
@@ -23,9 +25,14 @@ struct ShortcutGraph {
   std::vector<std::vector<std::array<Edge, 2>>> inv_star_edge_map;
 
   ShortcutGraph() = default;
-  ShortcutGraph(Graph g, std::vector<int> levels, CapacityT scale);
+  ShortcutGraph(const Graph& g, std::vector<int> levels, CapacityT scale);
 
   Edge StarEdge(int l, Vertex v, StarEdgeDirection dir) const {
     return inv_star_edge_map[l][v][dir];
+  }
+  bool IsStarVertex(Vertex v) const { return v >= without_shortcut.n; }
+  bool IsStarEdge(Edge e) const { return e >= without_shortcut.m; }
+  bool IsTopLevelEdge(Edge e) const {
+    return !IsStarEdge(e) && levels[e] == L;
   }
 };
