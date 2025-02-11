@@ -10,7 +10,7 @@ struct Dinic {
   struct Edge {
     int to, rev;
     CapacityT c, oc;
-    CapacityT flow() { return max(oc - c, 0LL); }  // if you need flows
+    CapacityT flow() { return max<CapacityT>(oc - c, 0); }  // if you need flows
   };
   vector<int> lvl, ptr, q;
   vector<vector<Edge>> adj;

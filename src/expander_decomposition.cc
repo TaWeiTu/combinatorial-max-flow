@@ -1,5 +1,6 @@
 #include "expander_decomposition.h"
 
+#include <algorithm>
 #include <array>
 #include <memory>
 #include <numeric>
@@ -17,6 +18,8 @@ class LeafWitness : public Witness {
  public:
   std::vector<CapacityT> Route(const std::vector<CapacityT> &demand) {
     auto flow = PushRelabelOnExpander(expander_, phi_, demand);
+    // TODO: what to return?
+    return {};
   }
 
  private:
@@ -55,7 +58,7 @@ class InternalWitness : public Witness {
     std::vector<CapacityT> flow(sg_.shortcut.m);
     for (int i = 0; i < 2; ++i) {
       auto subgraph_flow = child_witness_[i]->Route(subgraph_demand[i]);
-      assert(subgraph_flow.size() == shortcut_subgraphs_[i].shortcut.m &&
+      assert(std::ssize(subgraph_flow) == shortcut_subgraphs_[i].shortcut.m &&
              "child_witness_[i]->Route() returns a flow on the shortcut graph "
              "of the subgraph");
       for (Edge e : shortcut_subgraphs_[i].shortcut.Edges()) {
@@ -73,9 +76,9 @@ class InternalWitness : public Witness {
 
  private:
   ShortcutGraph sg_;
-  std::array<std::unique_ptr<Witness>, 2> child_witness_;
   std::array<Subgraph, 2> subgraphs_;
   std::array<ShortcutGraph, 2> shortcut_subgraphs_;
+  std::array<std::unique_ptr<Witness>, 2> child_witness_;
 };
 
 class MatchingPlayerImpl : public MatchingPlayer {
@@ -103,6 +106,8 @@ class MatchingPlayerImpl : public MatchingPlayer {
     for (const auto &fd : fd_) {
       for (auto [k, v] : fd.Demand()) expander.AddEdge(k.first, k.second, v);
     }
+    // TODO: what to return?
+    return {};
   }
 
  private:
@@ -120,9 +125,9 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
   const CapacityT phi = 100;  // TODO: update phi.
   std::vector<CapacityT> demand(g.n);
   const int max_l = *std::max_element(level.begin(), level.end());
-  const auto top_level = std::ranges::to<std::vector<Edge>>(
-      g.Edges() |
-      std::views::filter([max_l, &level](int e) { return level[e] == max_l; }));
+  std::vector<Edge> top_level;
+  for (auto e : g.Edges())
+    if (level[e] == max_l) top_level.push_back(e);
   for (Edge e : top_level) {
     demand[g.tail[e]] += g.capacity[e];
     demand[g.head[e]] += g.capacity[e];
@@ -190,7 +195,7 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
     std::vector<CapacityT> expanding_demand(g.n);
     for (Edge e : expanding_top_level) {
       expanding_demand[g.tail[e]] += g.capacity[e];
-      expanding_demand[g.head[e]] += g.capacity[e];
+    expanding_demand[g.head[e]] += g.capacity[e];
     }
     // re-run the cut-matching game to construct the witness
     MatchingPlayerImpl expanding_matching_player(sg);

@@ -7,8 +7,8 @@
 
 struct ShortcutGraph {
   Graph g, shortcut;
-  CapacityT scale;
   std::vector<int> levels;
+  CapacityT scale;
   std::vector<WeightT> weights;
   // map each edge in the shortcut graph to the original graph, or -1 if it is a
   // star edge.

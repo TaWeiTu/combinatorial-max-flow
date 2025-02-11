@@ -1,5 +1,6 @@
 #include "graph.h"
 
+#include <algorithm>
 #include <ranges>
 
 std::ostream& operator<<(std::ostream& os, const Graph& g) {
@@ -76,12 +77,16 @@ std::vector<int> RespectingOrderInternal(const Graph& g,
                                          const std::vector<int>& levels,
                                          int max_l) {
   if (max_l == 0) {
-    return std::ranges::to<std::vector<int>>(std::ranges::views::iota(0, g.n));
+    std::vector<int> v(g.n);
+    for (int i : std::views::iota(0, g.n)) v[i] = i;
+    return v;
   }
   Graph lower_level_subgraph =
       g.EdgeSubgraph([&levels, max_l](Edge e) { return levels[e] < max_l; });
-  auto sublevels = std::ranges::to<std::vector<int>>(
-      levels | std::views::filter([max_l](int l) { return l < max_l; }));
+  std::vector<int> sublevels;
+  for (auto& a :
+       levels | std::views::filter([max_l](int l) { return l < max_l; }))
+    sublevels.emplace_back(a);
   auto scc = lower_level_subgraph.SCC();
   const int num_scc = *std::max_element(scc.begin(), scc.end()) + 1;
   std::vector<std::vector<int>> comps(num_scc);
