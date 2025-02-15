@@ -7,6 +7,8 @@
 
 #include "types.h"
 
+struct Subgraph;
+
 struct Graph {
   int n = 0, m = 0;
 
@@ -61,28 +63,19 @@ struct Graph {
   /// Return the vertex subgraph induced by vertices in `s` in O(vol(s)\log n)
   /// time. Also return which edge in the original graph each edge in the
   /// subgraph corresopnds to.
-  std::pair<Graph, std::vector<Edge>> VertexSubgraph(
-      const std::vector<Vertex>& s) const {
-    Graph subgraph;
-    std::map<Vertex, Vertex> order;
-    for (Vertex v : s) {
-      order[v] = subgraph.AddVertex();
-    }
-    std::vector<Edge> edge_list;
-    for (Vertex v : s) {
-      for (Edge e : out_edges[v]) {
-        if (order.find(head[e]) != order.end()) {
-          edge_list.push_back(e);
-          subgraph.AddEdge(order[tail[e]], order[head[e]], capacity[e]);
-        }
-      }
-    }
-    return std::make_pair(subgraph, edge_list);
-  }
+  Subgraph VertexSubgraph(const std::vector<Vertex>& s) const;
 
   // Return a vector of length g.n which indicates the SCC each vertex belongs
   // to. The SCCs are numbered according to some valid topological order.
   std::vector<int> SCC() const;
+};
+
+struct Subgraph {
+  Graph g;
+  std::vector<Vertex> vertex_map;
+  std::vector<Edge> edge_map;
+  std::map<Vertex, Vertex> inv_vertex_map;
+  std::map<Edge, Edge> inv_edge_map;
 };
 
 std::ostream& operator<<(std::ostream& os, const Graph& g);

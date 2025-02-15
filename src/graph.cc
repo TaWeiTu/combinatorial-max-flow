@@ -16,6 +16,27 @@ Graph Graph::operator*(CapacityT scale) const {
   return g;
 }
 
+Subgraph Graph::VertexSubgraph(const std::vector<Vertex>& s) const {
+  Subgraph sg;
+  for (Vertex v : s) {
+    sg.inv_vertex_map[v] = sg.g.AddVertex();
+    sg.vertex_map.push_back(v);
+  }
+  std::vector<Edge> edge_list;
+  for (Vertex v : s) {
+    for (Edge e : out_edges[v]) {
+      if (sg.inv_vertex_map.find(head[e]) != sg.inv_vertex_map.end()) {
+        edge_list.push_back(e);
+        sg.inv_edge_map[e] =
+            sg.g.AddEdge(sg.inv_vertex_map[tail[e]], sg.inv_vertex_map[head[e]],
+                         capacity[e]);
+        sg.edge_map.push_back(e);
+      }
+    }
+  }
+  return sg;
+}
+
 std::vector<int> Graph::SCC() const {
   std::vector<bool> vis(n);
   std::vector<Vertex> order;
@@ -77,15 +98,14 @@ std::vector<int> RespectingOrderInternal(const Graph& g,
   std::vector<int> order(g.n);
   int offset = 0;
   for (int i = 0; i < num_scc; ++i) {
-    auto [scc_subgraph, subgraph_edges] =
-        lower_level_subgraph.VertexSubgraph(comps[i]);
-    auto scc_subgraph_levels = SubList(sublevels, subgraph_edges);
+    auto component = lower_level_subgraph.VertexSubgraph(comps[i]);
+    auto component_levels = SubList(sublevels, component.edge_map);
     auto subgraph_order =
-        RespectingOrderInternal(scc_subgraph, scc_subgraph_levels, max_l - 1);
-    for (int j = 0; j < scc_subgraph.n; ++j) {
+        RespectingOrderInternal(component.g, component_levels, max_l - 1);
+    for (int j = 0; j < component.g.n; ++j) {
       order[comps[i][j]] = subgraph_order[j] + offset;
     }
-    offset += scc_subgraph.n;
+    offset += component.g.n;
   }
   return order;
 }

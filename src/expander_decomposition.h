@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "graph.h"
+#include "shortcut_graph.h"
 
 class Witness {
  public:
@@ -11,5 +12,6 @@ class Witness {
       const std::vector<CapacityT>& demand) = 0;
 };
 
-std::pair<std::vector<int>, std::unique_ptr<Witness>> ExpanderDecomposition(
-    Graph g, const std::vector<int>& level);
+std::tuple<std::vector<int>, std::unique_ptr<Witness>, ShortcutGraph>
+ExpanderDecomposition(const Graph& g, const std::vector<int>& level,
+                      CapacityT scale);

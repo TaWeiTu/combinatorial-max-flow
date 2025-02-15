@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <limits>
+#include <numeric>
 #include <queue>
 
 #include "graph.h"
@@ -183,4 +184,27 @@ pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
       return {flow_value, flow};
     }
   }
+}
+
+std::vector<CapacityT> PushRelabelOnExpander(Graph expander, int phi,
+                                             std::vector<CapacityT> demand) {
+  CapacityT total_demand = std::accumulate(
+      demand.begin(), demand.end(), CapacityT(0),
+      [](auto a, auto b) { return a + std::max<CapacityT>(b, 0); });
+  std::vector<WeightT> weights(expander.m, expander.n);
+  std::vector<CapacityT> flow(expander.m);
+  // TODO: figure out the right h
+  WeightT h = 1;
+  while ((1 << h) < expander.n) h++;
+  h *= 10 * phi;
+  while (total_demand > 0) {
+    auto [v, f] = WeightedPushRelabel(expander, demand, weights, h);
+    for (Edge e : expander.Edges()) {
+      flow[e] += f[e];
+      demand[expander.tail[e]] -= f[e];
+      demand[expander.head[e]] += f[e];
+    }
+    total_demand -= v;
+  }
+  return flow;
 }

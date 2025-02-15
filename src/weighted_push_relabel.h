@@ -19,10 +19,9 @@ std::pair<CapacityT, std::vector<CapacityT>> WeightedPushRelabel(
 //
 // returns the graph G_A on which the flow algorithm runs and the resulting flow
 // vector in G_A and a cut
-std::tuple<Graph, CapacityT, std::vector<CapacityT>, std::vector<bool>>
+std::tuple<CapacityT, std::vector<CapacityT>, std::vector<bool>>
 WeightedPushRelabelOnShortcut(ShortcutGraph g, std::vector<CapacityT> demand,
-                              CapacityT kappa, CapacityT scale);
+                              CapacityT kappa);
 
-
-std::pair<Graph, std::vector<CapacityT>> PushRelabelOnExpander(
-    Graph expander, int phi, std::vector<CapacityT> demand);
+std::vector<CapacityT> PushRelabelOnExpander(Graph expander, int phi,
+                                             std::vector<CapacityT> demand);
