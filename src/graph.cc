@@ -1,6 +1,7 @@
 #include "graph.h"
 
 #include <algorithm>
+#include <numeric>
 #include <ranges>
 
 std::ostream& operator<<(std::ostream& os, const Graph& g) {
@@ -71,54 +72,19 @@ std::vector<int> Graph::SCC() const {
   return scc_id;
 }
 
-namespace {
-
-std::vector<int> RespectingOrderInternal(const Graph& g,
-                                         const std::vector<int>& levels,
-                                         int max_l) {
-  if (max_l == 0) {
-    std::vector<int> v(g.n);
-    for (int i : std::views::iota(0, g.n)) v[i] = i;
-    return v;
-  }
-  Graph lower_level_subgraph =
-      g.EdgeSubgraph([&levels, max_l](Edge e) { return levels[e] < max_l; });
-  std::vector<int> sublevels;
-  for (auto& a :
-       levels | std::views::filter([max_l](int l) { return l < max_l; }))
-    sublevels.emplace_back(a);
-  auto scc = lower_level_subgraph.SCC();
-  const int num_scc = *std::max_element(scc.begin(), scc.end()) + 1;
-  std::vector<std::vector<int>> comps(num_scc);
-  for (Vertex v : lower_level_subgraph.Vertices()) {
-    comps[scc[v]].push_back(v);
-  }
-
-  auto SubList = [&](const auto& lst, const auto& idx) {
-    std::decay_t<decltype(lst)> sublst;
-    for (int i : idx) sublst.push_back(lst[i]);
-    return sublst;
-  };
-
-  std::vector<int> order(g.n);
-  int offset = 0;
-  for (int i = 0; i < num_scc; ++i) {
-    auto component = lower_level_subgraph.VertexSubgraph(comps[i]);
-    auto component_levels = SubList(sublevels, component.edge_map);
-    auto subgraph_order =
-        RespectingOrderInternal(component.g, component_levels, max_l - 1);
-    for (int j = 0; j < component.g.n; ++j) {
-      order[comps[i][j]] = subgraph_order[j] + offset;
-    }
-    offset += component.g.n;
-  }
-  return order;
-}
-
-}  // namespace
-
 std::vector<int> RespectingOrder(const Graph& g,
                                  const std::vector<int>& levels) {
-  return RespectingOrderInternal(
-      g, levels, *std::max_element(levels.begin(), levels.end()) + 1);
+  int max_l = std::ranges::max(levels) + 1;
+  std::vector<Vertex> order(g.n);
+  std::iota(order.begin(), order.end(), 0);
+  for (int i = 0; i < max_l; ++i) {
+    auto scc = g.EdgeSubgraph([&](Edge e) { return levels[e] <= i; }).SCC();
+    std::vector<std::vector<Vertex>> comps(std::ranges::max(scc) + 1);
+    for (Vertex v : order) comps[scc[v]].push_back(v);
+    order.clear();
+    for (Vertex v : comps | std::views::join) order.push_back(v);
+  }
+  std::vector<int> tau(g.n);
+  for (int i : std::views::iota(0, g.n)) tau[order[i]] = i;
+  return tau;
 }

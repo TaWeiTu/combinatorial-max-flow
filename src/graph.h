@@ -83,6 +83,11 @@ std::ostream& operator<<(std::ostream& os, const Graph& g);
 // Compute a vertex ordering of `g` that respects the hierarchy induced by
 // `levels`.
 //
+// Returns a vector tau of length g.n, such that:
+//   * For every level i, and SCC in G \ E_{>i}, the image tau(C) is contiguous.
+//   * If u are v are in different level-i SCC but u can reach v in G \ E_{>i},
+//   then tau[u] < tau[v].
+//
 // TODO: Put this function here for now. Can be moved to an appropriate file in
 // the future.
 std::vector<int> RespectingOrder(const Graph& g,

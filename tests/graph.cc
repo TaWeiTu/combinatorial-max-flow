@@ -68,15 +68,42 @@ TEST_CASE("respecting order", "[order]") {
     }
   }
 
-  Graph g = Graph::FromEdgeList(7, {{0, 1, 0},
-                                    {1, 2, 0},
-                                    {2, 0, 0},
-                                    {2, 3, 0},
-                                    {3, 4, 0},
-                                    {4, 5, 0},
-                                    {5, 3, 0},
-                                    {5, 0, 0},
-                                    {2, 6, 0}});
-  auto order = RespectingOrder(g, {0, 0, 1, 0, 0, 0, 1, 2, 0});
-  REQUIRE(order == std::vector{0, 1, 2, 3, 4, 5, 6});
+  SECTION("fixed1") {
+    Graph g = Graph::FromEdgeList(7, {{0, 1, 0},
+                                      {1, 2, 0},
+                                      {2, 0, 0},
+                                      {2, 3, 0},
+                                      {3, 4, 0},
+                                      {4, 5, 0},
+                                      {5, 3, 0},
+                                      {5, 0, 0},
+                                      {2, 6, 0}});
+    auto order = RespectingOrder(g, {0, 0, 1, 0, 0, 0, 1, 2, 0});
+    REQUIRE(order == std::vector{0, 1, 2, 3, 4, 5, 6});
+  }
+
+  SECTION("fixed2") {
+    Graph g = Graph::FromEdgeList(11, {
+                                          {1, 2, 0},
+                                          {2, 3, 0},
+                                          {5, 4, 0},
+                                          {4, 0, 0},
+                                          {6, 7, 0},
+                                          {8, 9, 0},
+                                          {9, 6, 0},
+                                          {1, 10, 0},
+                                          {3, 4, 0},
+                                          {10, 6, 0},
+                                          {5, 8, 0},
+                                          {3, 1, 1},
+                                          {7, 8, 1},
+                                          {0, 5, 1},
+                                          {9, 10, 2},
+                                      });
+    std::vector<WeightT> level;
+    for (auto c : g.capacity) level.emplace_back(c);
+    auto order = RespectingOrder(g, level);
+    // this is the unique answer
+    REQUIRE(order == std::vector{5, 0, 1, 2, 4, 3, 9, 10, 7, 8, 6});
+  }
 }
