@@ -7,12 +7,20 @@
 
 // weighted push-relabel
 // implements [Algorithm 1, https://arxiv.org/pdf/2406.03648]
-
-// returns flow vector of length g.m
 // positive demand is source, negative demand is sink
-std::pair<CapacityT, std::vector<CapacityT>> WeightedPushRelabel(
-    Graph g, std::vector<CapacityT> demand, const std::vector<WeightT> w,
-    WeightT h);
+//
+// returns:
+//  1. value of flow
+//
+//  2. a flow vector of length g.m, assigning flow[e] flow to edge e
+//
+//  3. the residual demand vector, of length g.n.  residual_demand[u] =
+//    demand[u] - sum_{(u,v) in E} flow[u,v] + sum_{(v,u) in E} flow[v,u]
+//
+// Running time is O(m + h*n + (sum_e h/w[e])*log n)
+std::tuple<CapacityT, std::vector<CapacityT>, std::vector<CapacityT>>
+WeightedPushRelabel(Graph g, std::vector<CapacityT> demand,
+                    const std::vector<WeightT> w, WeightT h);
 
 // weighted push-relabel on shortcut graph
 // implements [Lemma 4.1]
@@ -31,5 +39,9 @@ std::tuple<CapacityT, std::vector<CapacityT>, std::vector<bool>>
 WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
                               CapacityT kappa);
 
-std::vector<CapacityT> PushRelabelOnExpander(Graph expander, int phi,
+// computes and returns a flow exactly routing the demand on a phi-expander. The
+// flow has congestion O(log n / phi). Running time is O(n log^2 n / phi), given
+// that the graph is actually a phi-expander.
+// TODO: double check congestion and running time guarantees
+std::vector<CapacityT> PushRelabelOnExpander(Graph expander, int inv_phi,
                                              std::vector<CapacityT> demand);

@@ -11,12 +11,10 @@
 #include "graph.h"
 #include "link_cut_tree.h"
 
-using namespace std;
-
 namespace {
 
 enum Direction { kNone = 0, kForward, kBackward };
-using DirectedEdge = pair<Edge, Direction>;
+using DirectedEdge = std::pair<Edge, Direction>;
 const DirectedEdge kMissing = {-1, kNone};
 const CapacityT kFlowMissing = -9;
 
@@ -36,7 +34,8 @@ struct U {
   };
 };
 
-auto DropWhile(auto &v, auto &&pred) -> optional<decay_t<decltype(v.front())>> {
+auto DropWhile(auto &v, auto &&pred)
+    -> std::optional<std::decay_t<decltype(v.front())>> {
   while (!empty(v) && pred(v.front())) v.pop();
   if (empty(v)) return {};
   return v.front();
@@ -45,15 +44,13 @@ auto DropWhile(auto &v, auto &&pred) -> optional<decay_t<decltype(v.front())>> {
 }  // namespace
 
 // implements [Algorithm 1, https://arxiv.org/pdf/2406.03648]
-pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
-                                                       vector<CapacityT> demand,
-                                                       const vector<WeightT> w,
-                                                       WeightT h) {
+std::tuple<CapacityT, std::vector<CapacityT>, std::vector<CapacityT>>
+WeightedPushRelabel(Graph g, std::vector<CapacityT> demand,
+                    const std::vector<WeightT> w, WeightT h) {
   assert(g.m == ssize(w));
   assert(g.n == ssize(demand));
 
-  vector<vector<vector<Edge>>> edges_at_height(g.n,
-                                               vector<vector<Edge>>(9 * h + 1));
+  std::vector edges_at_height(g.n, std::vector<std::vector<Edge>>(9 * h + 1));
   for (Edge e : g.Edges()) {
     if (g.tail[e] == g.head[e] || g.capacity[e] == 0) continue;
     assert(w[e] > 0);
@@ -63,18 +60,18 @@ pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
     }
   }
 
-  queue<Vertex> todo, sources;
+  std::queue<Vertex> todo, sources;
   for (Vertex v : g.Vertices()) {
     if (demand[v] >= 0) todo.emplace(v);
     if (demand[v] > 0) sources.emplace(v);
   }
 
-  vector<WeightT> label(g.n, 0);
-  vector<CapacityT> flow(g.m, 0);
-  vector<bool> dead(g.n, false);
-  vector<Direction> is_admissible(g.m, kNone);
-  vector<queue<DirectedEdge>> admissible_out(g.n);
-  vector<DirectedEdge> parent(g.n, kMissing);
+  std::vector<WeightT> label(g.n, 0);
+  std::vector<CapacityT> flow(g.m, 0);
+  std::vector<bool> dead(g.n, false);
+  std::vector<Direction> is_admissible(g.m, kNone);
+  std::vector<std::queue<DirectedEdge>> admissible_out(g.n);
+  std::vector<DirectedEdge> parent(g.n, kMissing);
 
   auto link_cut_tree = LinkCutTree<U, V>(g.n);
 
@@ -183,29 +180,24 @@ pair<CapacityT, vector<CapacityT>> WeightedPushRelabel(Graph g,
     } else {
       // make sure to remove edges from lct to compute their flow values
       for (Edge e : g.Edges()) SetAdmissible(e, kNone);
-      return {flow_value, flow};
+      return {flow_value, flow, demand};
     }
   }
 }
 
-std::vector<CapacityT> PushRelabelOnExpander(Graph expander, int phi,
+std::vector<CapacityT> PushRelabelOnExpander(Graph expander, int inv_phi,
                                              std::vector<CapacityT> demand) {
   CapacityT total_demand = std::accumulate(
       demand.begin(), demand.end(), CapacityT(0),
       [](auto a, auto b) { return a + std::max<CapacityT>(b, 0); });
-  std::vector<WeightT> weights(expander.m, expander.n);
+  std::vector<WeightT> weights(expander.m, 1);
   std::vector<CapacityT> flow(expander.m);
   // TODO: figure out the right h
-  WeightT h = 1;
-  while ((1 << h) < expander.n) h++;
-  h *= 10 * phi;
+  WeightT h = WeightT(10 * inv_phi * log2(expander.n));
   while (total_demand > 0) {
-    auto [v, f] = WeightedPushRelabel(expander, demand, weights, h);
-    for (Edge e : expander.Edges()) {
-      flow[e] += f[e];
-      demand[expander.tail[e]] -= f[e];
-      demand[expander.head[e]] += f[e];
-    }
+    auto [v, f, rd] = WeightedPushRelabel(expander, demand, weights, h);
+    for (Edge e : expander.Edges()) flow[e] += f[e];
+    demand = rd;
     total_demand -= v;
   }
   return flow;
@@ -230,19 +222,21 @@ WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
   WeightT h =
       WeightT(g.n * (6 * sg.L * sg.scale + 100 * kappa * log2(total_capacity)));
 
-  auto [flow_value, flow] = WeightedPushRelabel(g, demand, w, h);
+  auto [flow_value, flow, residual_demand] =
+      WeightedPushRelabel(g, demand, w, h);
 
-  CapacityT total_demand = std::accumulate(demand.begin(), demand.end(), 0);
+  CapacityT total_source = 0, total_sink = 0;
+  for (auto d : demand) (d > 0 ? total_source : total_sink) += d;
 
-  if (flow_value == total_demand) {
+  if (flow_value == std::min(total_source, total_sink)) {
     // TODO: how should the cut look like here? for not just empty vector
     return {flow_value, flow, {}};
   }
 
   // Calculate distance layers S[i]
 
-  std::vector<list<int>> S(h + 2);
-  std::vector<std::pair<int, list<int>::iterator>> where(g.n);
+  std::vector<std::list<int>> S(h + 2);
+  std::vector<std::pair<int, std::list<int>::iterator>> where(g.n);
   for (auto v : g.Vertices()) {
     where[v] = {h + 1, S[h + 1].emplace(S[h + 1].end(), v)};
   }
@@ -253,17 +247,6 @@ WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
       where[v] = {d, S[d].emplace(S[d].end(), v)};
     }
   };
-
-  auto residual_demand = demand;
-  for (auto e : g.Edges()) {
-    residual_demand[g.head[e]] += flow[e];
-    residual_demand[g.tail[e]] -= flow[e];
-  }
-
-  for (auto v : g.Vertices()) {  // TODO: remove asserts after testing?
-    assert(abs(residual_demand[v]) <= abs(demand[v]));
-    assert((residual_demand[v]) * (demand[v]) >= 0);
-  }
 
   for (auto v : g.Vertices()) {
     if (residual_demand[v] > 0) Relax(v, 0);
@@ -294,7 +277,8 @@ WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
     int l = where[g.tail[e]].first;
     int r = where[g.head[e]].first;
     if (sg.IsTopLevelEdge(e)) {
-      vol[e] += sg.shortcut.capacity[e];
+      vol[l] += sg.shortcut.capacity[e];
+      vol[r] += sg.shortcut.capacity[e];
     }
     if (r > l) {
       crossing[l] += sg.shortcut.capacity[e];
@@ -304,8 +288,8 @@ WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
   partial_sum(vol.begin(), vol.end(), vol.begin());
   partial_sum(crossing.begin(), crossing.end(), crossing.begin());
 
-  // crossing[i] is now c(E(S[<=i], S[>i]))
-  // vol[i] is now vol[S[<=i]]
+  // crossing[i] is now c(E(S[<=i], S[>i])) * sg.scale
+  // vol[i] is now vol[S[<=i]] * sg.scale
 
   auto best = std::ranges::min(std::views::iota(0, h), {}, [&](int i) {
     return kappa * crossing[i] - vol[i];
