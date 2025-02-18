@@ -16,7 +16,7 @@ struct ShortcutGraph {
   // star edge.
   std::vector<Edge> edge_map;
 
-  enum StarEdgeDirection { kToStar, kFromStar };
+  enum StarEdgeDirection : uint8_t { kToStar = 0, kFromStar = 1 };
 
   // map each star edge to its level and its vertex; only entries corresponding
   // to star edges are meaningful.

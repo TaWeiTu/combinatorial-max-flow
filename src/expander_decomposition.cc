@@ -16,15 +16,42 @@ namespace {
 
 class LeafWitness : public Witness {
  public:
+  LeafWitness(Graph expander, CapacityT phi, ShortcutGraph sg,
+              std::vector<int> expander_edge_map,
+              std::vector<FlowDecomposition> fd)
+      : Witness(),
+        expander_(expander),
+        phi_(phi),
+        sg_(sg),
+        expander_edge_map_(expander_edge_map),
+        fd_(fd) {}
   std::vector<CapacityT> Route(const std::vector<CapacityT> &demand) {
-    auto flow = PushRelabelOnExpander(expander_, phi_, demand);
-    // TODO: what to return?
-    return {};
+    auto flow_on_expander = PushRelabelOnExpander(expander_, phi_, demand);
+    const int R = fd_.size();
+    std::vector<MultiCommodityDemand> demand_per_round(R);
+    for (Edge e : expander_.Edges()) {
+      int r = expander_edge_map_[e];
+      demand_per_round[r][std::make_pair(
+          expander_.tail[e], expander_.head[e])] += flow_on_expander[e];
+    }
+    std::vector<CapacityT> flow(sg_.shortcut.m);
+    for (int r = 0; r < R; ++r) {
+      auto f = fd_[r].Route(demand_per_round[r]);
+      assert(std::ssize(f) == sg_.shortcut.m &&
+             "the flow is on the shortcut graph");
+      for (Edge e : sg_.shortcut.Edges()) flow[e] += f[e];
+    }
+    return flow;
   }
 
  private:
   Graph expander_;
   CapacityT phi_;
+  ShortcutGraph sg_;
+  // map each edge in the expander into the round number (of the cut-matching
+  // game) when it was added to the expander.
+  std::vector<int> expander_edge_map_;
+  std::vector<FlowDecomposition> fd_;
 };
 
 class InternalWitness : public Witness {
@@ -83,14 +110,16 @@ class InternalWitness : public Witness {
 
 class MatchingPlayerImpl : public MatchingPlayer {
  public:
-  MatchingPlayerImpl(const ShortcutGraph &sg) : MatchingPlayer(), sg_(sg) {}
+  MatchingPlayerImpl(const ShortcutGraph &sg, CapacityT phi)
+      : MatchingPlayer(), sg_(sg), phi_(phi) {}
   ~MatchingPlayerImpl() = default;
   std::pair<std::vector<bool>,
             std::vector<std::tuple<Vertex, Vertex, CapacityT>>>
   Match(const std::vector<CapacityT> &subdemand,
         const std::vector<bool> &bipartition) {
-    std::vector<CapacityT> demand(n_);
-    for (Vertex v = 0; v < n_; ++v) {
+    const int n = sg_.without_shortcut.n;
+    std::vector<CapacityT> demand(n);
+    for (Vertex v = 0; v < n; ++v) {
       demand[v] = bipartition[v] ? -subdemand[v] : subdemand[v];
     }
     auto [value, flow, cut] =
@@ -102,16 +131,19 @@ class MatchingPlayerImpl : public MatchingPlayer {
   }
 
   std::unique_ptr<Witness> ExtractWitness() {
-    Graph expander(n_);
-    for (const auto &fd : fd_) {
-      for (auto [k, v] : fd.Demand()) expander.AddEdge(k.first, k.second, v);
+    Graph expander(sg_.without_shortcut.n);
+    std::vector<int> expander_edge_map;
+    for (int r = 0; r < std::ssize(fd_); ++r) {
+      for (auto [k, v] : fd_[r].Demand()) {
+        expander.AddEdge(k.first, k.second, v);
+        expander_edge_map.push_back(r);
+      }
     }
-    // TODO: what to return?
-    return {};
+    return std::make_unique<LeafWitness>(expander, phi_, sg_, expander_edge_map,
+                                         fd_);
   }
 
  private:
-  int n_;
   ShortcutGraph sg_;
   CapacityT phi_;
   std::vector<FlowDecomposition> fd_;
@@ -122,7 +154,6 @@ class MatchingPlayerImpl : public MatchingPlayer {
 std::tuple<std::vector<int>, std::unique_ptr<Witness>, ShortcutGraph>
 ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
                       CapacityT scale) {
-  const CapacityT phi = 100;  // TODO: update phi.
   std::vector<CapacityT> demand(g.n);
   const int max_l = *std::max_element(level.begin(), level.end());
   std::vector<Edge> top_level;
@@ -135,7 +166,8 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
   ShortcutGraph sg(g, level, scale);
   std::unique_ptr<CutMatchingGame> cmg =
       std::make_unique<MockCutMatchingGame>();
-  MatchingPlayerImpl matching_player(sg);
+  const CapacityT phi = 100;  // TODO: figuer out the value of phi.
+  MatchingPlayerImpl matching_player(sg, phi);
   auto result = cmg->Run(g.n, demand, &matching_player);
 
   std::vector<int> new_level(g.m);
@@ -184,21 +216,34 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
     auto subdemand = std::get<std::vector<CapacityT>>(result);
     // extract a large set of expanding terminal edges
     std::vector<Edge> expanding_top_level;
+    CapacityT total_expanding_capacity = 0, total_capacity = 0;
     for (Edge e : top_level) {
+      total_capacity += g.capacity[e];
       if (subdemand[g.head[e]] * 2 >= demand[g.head[e]] &&
           subdemand[g.tail[e]] * 2 >= demand[g.tail[e]]) {
         expanding_top_level.push_back(e);
+        total_expanding_capacity += g.capacity[e];
       } else {
         new_level[e] = max_l + 1;
       }
     }
+    assert(total_expanding_capacity * 2 >= total_capacity &&
+           "half of the total capacity is expanding");
     std::vector<CapacityT> expanding_demand(g.n);
     for (Edge e : expanding_top_level) {
       expanding_demand[g.tail[e]] += g.capacity[e];
       expanding_demand[g.head[e]] += g.capacity[e];
     }
+    assert(std::ranges::all_of(std::ranges::iota_view(0, g.n),
+                               [&](int i) {
+                                 return expanding_demand[i] <= subdemand[i] * 2;
+                               }) &&
+           "the expanding demand should be entry-wise bounded by the output of "
+           "the cut-matching game up to a factor of 2");
+
     // re-run the cut-matching game to construct the witness
-    MatchingPlayerImpl expanding_matching_player(sg);
+    const CapacityT new_phi = 0;  // TODO: figure out the value of new_phi.
+    MatchingPlayerImpl expanding_matching_player(sg, new_phi);
     auto expanding_result =
         cmg->Run(g.n, expanding_demand, &expanding_matching_player);
     assert(
