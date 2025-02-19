@@ -9,7 +9,7 @@
 #include "graph.h"
 #include "link_cut_tree.h"
 
-namespace {
+namespace flow_decomposition {
 
 struct V {
   CapacityT flow_remaining, subflow;
@@ -175,20 +175,73 @@ std::pair<MultiCommodityDemand, std::vector<CapacityT>> RouteInternal(
   return std::make_pair(demand, subflow);
 }
 
-}  // namespace
+}  // namespace flow_decomposition
 
 FlowDecomposition::FlowDecomposition(const Graph &g,
                                      const std::vector<CapacityT> &flow)
     : g_(g), flow_(flow) {
   std::vector<CapacityT> _;
-  std::tie(demand_, _) = RouteInternal(g_, flow_, {});
+  std::tie(demand_, _) = flow_decomposition::RouteInternal(g_, flow_, {});
 }
 
 std::vector<CapacityT> FlowDecomposition::Route(
-    const std::map<std::pair<Vertex, Vertex>, CapacityT> &subdemand) {
+    const MultiCommodityDemand &subdemand) {
+  CapacityT scale = std::numeric_limits<CapacityT>::max();
   for (auto [k, v] : subdemand) {
-    assert(demand_.find(k) != demand_.end() && v <= demand_[k] &&
-           "Input must be a subdemand");
+    assert(demand_.find(k) != demand_.end() && "input must be a subdemand");
+    scale = std::min(scale, demand_[k] / v);
   }
-  return RouteInternal(g_, flow_, subdemand).second;
+  assert(scale >= 1 && "input must be a subdemand");
+  MultiCommodityDemand scaled_up_subdemand = subdemand;
+  for (auto &[k, v] : scaled_up_subdemand) v *= scale;
+  auto scaled_up_flow =
+      flow_decomposition::RouteInternal(g_, flow_, scaled_up_subdemand).second;
+  return FlowRounding(g_, scaled_up_flow, scale);
+}
+
+namespace flow_rounding {
+
+struct V {
+  CapacityT min_flow;
+  Vertex min_vertex;
+
+  V operator+(const V &rhs) const {
+    return min_flow < rhs.min_flow ? *this : rhs;
+  }
+};
+
+struct U {
+  CapacityT delta;
+
+  static U Compose(U lhs, U rhs) { return U{lhs.delta + rhs.delta}; }
+  static V Apply(U upd, V val) {
+    return V{val.min_flow + upd.delta, val.min_vertex};
+  }
+};
+
+};  // namespace flow_rounding
+
+std::vector<CapacityT> FlowRounding(const Graph &g,
+                                    const std::vector<CapacityT> &flow,
+                                    CapacityT scale) {
+  std::vector<CapacityT> demand(g.n);
+  for (Edge e : g.Edges()) {
+    demand[g.tail[e]] += flow[e];
+    demand[g.head[e]] -= flow[e];
+  }
+  assert(std::ranges::all_of(g.Vertices(),
+                             [&](Vertex v) { return demand[v] % scale == 0; }));
+  using namespace flow_rounding;
+  std::vector<std::vector<std::pair<Edge, CapacityT>>> available(g.n);
+
+  LinkCutTree<U, V> lct(g.n);
+  for (Edge e : g.Edges()) {
+    if (flow[e] % scale != 0) {
+      available[g.tail[e]].emplace_back(e, scale - flow[e] % scale);
+      available[g.head[e]].emplace_back(e, flow[e] % scale);
+    }
+  }
+  // TODO: Finish implementation
+  while (true) {
+  }
 }

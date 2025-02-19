@@ -28,3 +28,11 @@ class FlowDecomposition {
   Graph g_;
   std::vector<CapacityT> flow_;
 };
+
+// Flow rounding
+//
+// Given a flow f such that the demand d it routes is a multiple of some
+// integral scale s, return a flow f' such that f' <= ceil(f/s) that routes d/s.
+std::vector<CapacityT> FlowRounding(const Graph& g,
+                                    const std::vector<CapacityT>& flow,
+                                    CapacityT scale);
