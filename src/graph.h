@@ -32,7 +32,7 @@ struct Graph {
   }
 
   Graph() = default;
-  Graph(int n) : n(n) {}
+  Graph(int n) : n(n), out_edges(n), in_edges(n) {}
 
   static Graph FromEdgeList(
       int n, const std::vector<std::tuple<Vertex, Vertex, CapacityT>>& edges) {
