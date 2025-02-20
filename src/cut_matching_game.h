@@ -23,15 +23,7 @@ class MatchingPlayer {
 //   * A subdemand d' that is \Omega(1/\log^2 n)-expanding in the union of
 //     matchings (std::vector<CapacityT>)
 //   * The full demand d is expanding (CutMatchingGame::Expanding)
-class CutMatchingGame {
- public:
-  struct Expanding {};
-  virtual std::variant<std::vector<bool>, std::vector<CapacityT>, Expanding>
-  Run(int n, const std::vector<CapacityT> &demand, MatchingPlayer *m) = 0;
-};
 
-class MockCutMatchingGame : public CutMatchingGame {
- public:
-  std::variant<std::vector<bool>, std::vector<CapacityT>, Expanding> Run(
-      int n, const std::vector<CapacityT> &demand, MatchingPlayer *m);
-};
+struct Expanding {};
+std::variant<std::vector<bool>, std::vector<CapacityT>, Expanding>
+CutMatchingGame(int n, const std::vector<CapacityT> &demand, MatchingPlayer *m);

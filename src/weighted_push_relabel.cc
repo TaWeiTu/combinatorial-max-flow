@@ -214,7 +214,8 @@ WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
   auto w = sg.weights;
   // TODO: check if the demand is already scaled up?
   demand.resize(g.n);
-  for (auto &d : demand) d *= sg.scale;
+  // NOTE: demand is ALREADY scaled up
+  // for (auto &d : demand) d *= sg.scale;
 
   CapacityT total_capacity = 0;
   for (auto e : g.Edges()) total_capacity += g.capacity[e];

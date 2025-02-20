@@ -32,7 +32,8 @@ struct ShortcutGraph {
   }
   bool IsStarVertex(Vertex v) const { return v >= without_shortcut.n; }
   bool IsStarEdge(Edge e) const { return e >= without_shortcut.m; }
-  bool IsTopLevelEdge(Edge e) const {
-    return !IsStarEdge(e) && levels[e] == L;
+  bool IsTopLevelStarEdge(Edge e) const {
+    return IsStarEdge(e) && std::get<0>(star_edge_map[e]) == L;
   }
+  bool IsTopLevelEdge(Edge e) const { return !IsStarEdge(e) && levels[e] == L; }
 };

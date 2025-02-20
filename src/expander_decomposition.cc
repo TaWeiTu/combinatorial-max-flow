@@ -164,11 +164,9 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
     demand[g.head[e]] += g.capacity[e];
   }
   ShortcutGraph sg(g, level, scale);
-  std::unique_ptr<CutMatchingGame> cmg =
-      std::make_unique<MockCutMatchingGame>();
   const CapacityT phi = 100;  // TODO: figuer out the value of phi.
   MatchingPlayerImpl matching_player(sg, phi);
-  auto result = cmg->Run(g.n, demand, &matching_player);
+  auto result = CutMatchingGame(g.n, demand, &matching_player);
 
   std::vector<int> new_level(g.m);
 
@@ -214,6 +212,11 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
   } else {
     // certified that a large portion of demand is expanding
     auto subdemand = std::get<std::vector<CapacityT>>(result);
+    assert(
+        std::accumulate(subdemand.begin(), subdemand.end(), CapacityT(0)) * 8 >=
+            std::accumulate(demand.begin(), demand.end(), CapacityT(0)) * 7 &&
+        "the cut-matching game certifies 7/8 fraction of the demand is "
+        "expanding.");
     // extract a large set of expanding terminal edges
     std::vector<Edge> expanding_top_level;
     CapacityT total_expanding_capacity = 0, total_capacity = 0;
@@ -245,10 +248,9 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
     const CapacityT new_phi = 0;  // TODO: figure out the value of new_phi.
     MatchingPlayerImpl expanding_matching_player(sg, new_phi);
     auto expanding_result =
-        cmg->Run(g.n, expanding_demand, &expanding_matching_player);
-    assert(
-        std::holds_alternative<CutMatchingGame::Expanding>(expanding_result) &&
-        "The input demand must be expanding");
+        CutMatchingGame(g.n, expanding_demand, &expanding_matching_player);
+    assert(std::holds_alternative<Expanding>(expanding_result) &&
+           "The input demand must be expanding");
     return std::make_tuple(
         new_level, std::move(expanding_matching_player.ExtractWitness()), sg);
   }
