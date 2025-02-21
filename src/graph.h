@@ -48,7 +48,6 @@ struct Graph {
     return {tail[e], head[e], capacity[e]};
   }
 
-  Graph Residual(const std::vector<CapacityT>& flow) const;
   Graph operator*(CapacityT scale) const;
 
   template <typename F>
