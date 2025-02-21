@@ -26,4 +26,4 @@ class MatchingPlayer {
 
 struct Expanding {};
 std::variant<std::vector<bool>, std::vector<CapacityT>, Expanding>
-CutMatchingGame(int n, const std::vector<CapacityT> &demand, MatchingPlayer *m);
+CutMatchingGame(const std::vector<CapacityT> &demand, MatchingPlayer *m);

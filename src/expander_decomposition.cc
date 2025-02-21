@@ -166,7 +166,7 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
   ShortcutGraph sg(g, level, scale);
   const CapacityT phi = 100;  // TODO: figuer out the value of phi.
   MatchingPlayerImpl matching_player(sg, phi);
-  auto result = CutMatchingGame(g.n, demand, &matching_player);
+  auto result = CutMatchingGame(demand, &matching_player);
 
   std::vector<int> new_level(g.m);
 
@@ -248,7 +248,7 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
     const CapacityT new_phi = 0;  // TODO: figure out the value of new_phi.
     MatchingPlayerImpl expanding_matching_player(sg, new_phi);
     auto expanding_result =
-        CutMatchingGame(g.n, expanding_demand, &expanding_matching_player);
+        CutMatchingGame(expanding_demand, &expanding_matching_player);
     assert(std::holds_alternative<Expanding>(expanding_result) &&
            "The input demand must be expanding");
     return std::make_tuple(
