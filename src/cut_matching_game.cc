@@ -23,13 +23,14 @@ struct NonStopCutMatchingGame {
   std::vector<std::vector<std::tuple<Vertex, Vertex, CapacityT>>> matchings;
 
   std::mt19937_64 rng_gen;
-  std::uniform_real_distribution<D> uniform01;
+  std::normal_distribution<D> gaussian;
 
   NonStopCutMatchingGame(const std::vector<CapacityT> &demand,
                          MatchingPlayer *m);
   std::optional<std::vector<bool>> DoRound();
   std::variant<std::vector<bool>, std::vector<CapacityT>, Expanding> Run();
-  std::vector<D> project_F(std::vector<D> r);
+  std::vector<D> ProjectByF(std::vector<D> r);
+  std::vector<D> RandomVectorOrthogonalToOne();
 };
 
 NonStopCutMatchingGame::NonStopCutMatchingGame(
@@ -40,10 +41,23 @@ NonStopCutMatchingGame::NonStopCutMatchingGame(
       matching_player(m),
       total_demand(std::accumulate(demand.begin(), demand.end(), 0)),
       rng_gen(42),
-      uniform01(0, 1) {}
+      gaussian(0, 1) {}
+
+std::vector<D> NonStopCutMatchingGame::RandomVectorOrthogonalToOne() {
+  // Project a n-dimensional gaussian distribution to the hyperplane orthogonal
+  // to the all ones vector. This gives a gaussian distribution in this
+  // hyperplane. Now we could normalize the result to get a unit vector, but
+  // this normalization is not necessary as we only look at thresholds in a
+  // (scale-invariant) projection later.
+  std::vector<D> r(n);
+  for (int i = 0; i < n; ++i) r[i] = gaussian(rng_gen);
+  D sum = std::accumulate(r.begin(), r.end(), 0);
+  for (int i = 0; i < n; ++i) r[i] -= sum / n;
+  return r;  // NOTE: not normalized
+}
 
 // calculates vector p(v) = ⟨F(v)/demand[v], r⟩
-std::vector<D> NonStopCutMatchingGame::project_F(std::vector<D> r) {
+std::vector<D> NonStopCutMatchingGame::ProjectByF(std::vector<D> r) {
   for (int v = 0; v < n; ++v) r[v] *= demand[v];
   for (const auto &M_i : matchings) {
     auto old_r = r;
@@ -71,13 +85,8 @@ NonStopCutMatchingGame::Run() {
 }
 
 std::optional<std::vector<bool>> NonStopCutMatchingGame::DoRound() {
-  // TODO: do we need <r,1> = 0, or is independent U(0,1) enough?
-  // I think U(0,1) is enough, as it is only used later to find a threshold
-  // value after projection.
-  std::vector<D> r(n);
-  for (int v = 0; v < n; ++v) r[v] = uniform01(rng_gen);
-  auto p = project_F(r);
-
+  auto r = RandomVectorOrthogonalToOne();
+  auto p = ProjectByF(r);
   std::ranges::sort(A, {}, [&](Vertex v) { return p[v]; });
   // having the source be a prefix and sink suffix OR vice versa leads to
   // potential decrease. Instead of doing something smart to decide which, we
