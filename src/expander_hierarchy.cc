@@ -49,6 +49,8 @@ std::vector<CapacityT> FlowUnfolding::Unfold(
   return flow_on_shortcut;
 }
 
+namespace {
+
 std::pair<std::vector<int>, FlowUnfolding> BuildExpanderHierarchy(Graph g) {
   std::vector<int> level(g.m, 0);
   CapacityT total_capacity =
@@ -71,4 +73,10 @@ std::pair<std::vector<int>, FlowUnfolding> BuildExpanderHierarchy(Graph g) {
     level = new_level;
   }
   return std::make_pair(level, std::move(fu));
+}
+
+}  // namespace
+
+ExpanderHierarchy::ExpanderHierarchy(Graph g) {
+  std::tie(level_, fu_) = BuildExpanderHierarchy(g);
 }

@@ -43,16 +43,16 @@ std::pair<CapacityT, std::vector<CapacityT>> MaximumFlow(const Graph& g,
     }
 
     // Step 2: build the expander hierarchy
-    ExpanderHierarchy H(residual);
+    ExpanderHierarchy eh(residual);
 
     // Step 3: run weighted push relabel on shortcut graph
     auto [flow_value, flow_on_sg, _cut] =
-        WeightedPushRelabelOnShortcut(H.shortcut_graph_, st_demand, 1);
+        WeightedPushRelabelOnShortcut(eh.GetShortcutGraph(), st_demand, 1);
 
     if (flow_value == 0) break;  // no flow in the residual graph, we are done
 
     // Step 4: unwrap the flow
-    auto flow_on_residual = H.UnwrapFlow(flow_on_sg);
+    auto flow_on_residual = eh.Unfold(flow_on_sg);
     // TODO: remember that flow_on_sg is scaled up. somewhere we need to scale
     // down. Does this happen in H.Unwrap or here? When scaling down, we have to
     // have a rounded flow.
