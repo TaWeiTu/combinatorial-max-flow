@@ -46,7 +46,7 @@ TEST_CASE("weighted push relabel stress", "[wpr][stress]") {
 
     CapacityT demand_routed = 0;
     for (auto v : g.Vertices()) {
-      demand_routed = max<CapacityT>(0, demand[v] - residual_demand[v]);
+      demand_routed += max<CapacityT>(0, demand[v] - residual_demand[v]);
       // check subdemand
       REQUIRE(abs(residual_demand[v]) <= abs(demand[v]));
       REQUIRE(residual_demand[v] * demand[v] >= 0);
