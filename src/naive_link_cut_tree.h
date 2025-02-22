@@ -6,9 +6,9 @@
 #include "link_cut_tree.h"
 
 template <typename U, typename V>
-class NaiveLinkCutTree : public LinkCutTree<U, V> {
+class NaiveLinkCutTree {
  public:
-  NaiveLinkCutTree(int n) : LinkCutTree<U, V>(n), values_(n), parent_(n, -1) {}
+  NaiveLinkCutTree(int n) : values_(n), parent_(n, -1) {}
 
   void Link(Vertex c, Vertex p, V edge_value) {
     assert(parent_[c] == -1);

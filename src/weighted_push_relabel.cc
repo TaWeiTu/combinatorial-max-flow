@@ -32,6 +32,8 @@ struct U {
   static V Apply(const U &u, const V &v) {
     return V{.min_cap = v.min_cap + u.inc, .bottleneck = v.bottleneck};
   };
+  static V Reverse(V v) { return v; }
+  static U Reverse(U u) { return u; }
 };
 
 auto DropWhile(auto &v, auto &&pred)

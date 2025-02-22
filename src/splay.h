@@ -13,10 +13,16 @@ struct SplayNode {
   SplayNode *child[2], *fa, *pfa;
   U update;
   V value, aggregation;
+  bool reversed;
 
   template <typename... Args>
   SplayNode(Vertex id, Args &&...args)
-      : id(id), fa(nullptr), pfa(nullptr), value(args...), aggregation(value) {
+      : id(id),
+        fa(nullptr),
+        pfa(nullptr),
+        value(args...),
+        aggregation(value),
+        reversed(false) {
     child[0] = child[1] = nullptr;
   }
 
@@ -26,32 +32,38 @@ struct SplayNode {
     if (child[1]) aggregation = child[1]->aggregation + aggregation;
   }
 
+  void Reverse() {
+    value = U::Reverse(value);
+    aggregation = U::Reverse(aggregation);
+    update = U::Reverse(update);
+    std::swap(child[0], child[1]);
+    reversed = !reversed;
+  }
+
   void Push() {
     for (int d : {0, 1}) {
-      if (child[d]) child[d]->Update(update);
+      if (child[d]) {
+        if (reversed) child[d]->Reverse();
+        child[d]->Update(update);
+      }
     }
+    reversed = false;
     update = U();
   }
 
   bool Relation() const { return this == fa->child[1]; }
 
   void Rotate() {
-    if (fa->fa) {
-      fa->fa->Push();
-    }
+    if (fa->fa) fa->fa->Push();
     fa->Push();
     Push();
     std::swap(pfa, fa->pfa);
     bool d = Relation();
     SplayNode *t = fa;
-    if (t->fa) {
-      t->fa->child[t->Relation()] = this;
-    }
+    if (t->fa) t->fa->child[t->Relation()] = this;
     fa = t->fa;
     t->child[d] = child[!d];
-    if (child[!d]) {
-      child[!d]->fa = t;
-    }
+    if (child[!d]) child[!d]->fa = t;
     child[!d] = t;
     t->fa = this;
     t->Pull();
@@ -79,6 +91,7 @@ struct SplayNode {
 
   void Expose() {
     Splay();
+    Push();
     if (child[1]) {
       child[1]->fa = nullptr;
       child[1]->pfa = this;
@@ -89,9 +102,7 @@ struct SplayNode {
 
   bool Splice() {
     Splay();
-    if (!pfa) {
-      return false;
-    }
+    if (!pfa) return false;
     pfa->Expose();
     pfa->child[1] = this;
     fa = pfa;
@@ -109,6 +120,12 @@ struct SplayNode {
     value = U::Apply(new_update, value);
     aggregation = U::Apply(new_update, aggregation);
     update = U::Compose(update, new_update);
+  }
+
+  void MakeRoot() {
+    Access();
+    Splay();
+    Reverse();
   }
 };
 

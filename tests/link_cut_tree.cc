@@ -22,13 +22,13 @@ struct U {
   U(int x) : x(x) {}
   static V Apply(U a, V b) { return V{a.x * b.sz + b.val, b.sz}; }
   static U Compose(U a, U b) { return U(a.x + b.x); }
+  static V Reverse(V v) { return v; }
+  static U Reverse(U u) { return u; }
 };
 }  // namespace sum_increment
 
-TEMPLATE_TEST_CASE("link cut tree", "[lct]",
-                   (LinkCutTree<sum_increment::U, sum_increment::V>),
-                   (NaiveLinkCutTree<sum_increment::U, sum_increment::V>)) {
-  TestType lct(10);
+TEST_CASE("link cut tree", "[lct]") {
+  LinkCutTree<sum_increment::U, sum_increment::V> lct(10);
 
   lct.Link(3, 2, {10000, 1});
   lct.Link(4, 3, {1000, 1});
@@ -68,6 +68,43 @@ TEMPLATE_TEST_CASE("link cut tree", "[lct]",
     REQUIRE(lct.GetRoot(6) == 5);
     REQUIRE(lct.QueryPathToRoot(6).val == 11);
   }
+
+  SECTION("change root") {
+    lct.CutParent(5);
+    lct.MakeRoot(3);
+    REQUIRE(lct.GetRoot(2) == 3);
+    REQUIRE(lct.GetRoot(3) == 3);
+    REQUIRE(lct.GetRoot(4) == 3);
+    REQUIRE(lct.GetRoot(5) == 5);
+    REQUIRE(lct.GetRoot(6) == 5);
+    lct.Link(5, 3, {100, 1});
+    lct.MakeRoot(5);
+    REQUIRE(lct.GetRoot(2) == 5);
+    REQUIRE(lct.GetRoot(3) == 5);
+    REQUIRE(lct.GetRoot(4) == 5);
+    REQUIRE(lct.GetRoot(5) == 5);
+    REQUIRE(lct.GetRoot(6) == 5);
+    lct.CutParent(4);
+    lct.MakeRoot(6);
+    lct.CutParent(5);
+    REQUIRE(lct.GetRoot(2) == 5);
+    REQUIRE(lct.GetRoot(3) == 5);
+    REQUIRE(lct.GetRoot(5) == 5);
+    lct.MakeRoot(2);
+    lct.CutParent(3);
+    lct.MakeRoot(5);
+    REQUIRE(lct.GetRoot(3) == 5);
+    REQUIRE(lct.GetRoot(5) == 5);
+  }
+
+  SECTION("change root with queries") {
+    lct.MakeRoot(3);
+    REQUIRE(lct.QueryPathToRoot(6).val == 10113);
+    lct.MakeRoot(4);
+    REQUIRE(lct.QueryPathToRoot(6).val == 11113);
+    lct.UpdatePathToRoot(2, {1});
+    REQUIRE(lct.QueryPathToRoot(6).val == 11115);
+  }
 }
 
 namespace free_monoid {
@@ -92,6 +129,8 @@ struct U {
     a.updates.insert(end(a.updates), begin(b.updates), end(b.updates));
     return a;
   }
+  static V Reverse(V v) { return v; }
+  static U Reverse(U u) { return u; }
 };
 }  // namespace free_monoid
 

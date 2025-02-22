@@ -36,6 +36,8 @@ struct U {
     return V(val.flow_remaining + upd.update_flow_remaining,
              val.subflow + upd.update_subflow, val.min_vertex);
   }
+  static V Reverse(V v) { return v; }
+  static U Reverse(U u) { return u; }
 };
 
 std::pair<MultiCommodityDemand, std::vector<CapacityT>> RouteInternal(
@@ -189,7 +191,7 @@ std::vector<CapacityT> FlowDecomposition::Route(
   CapacityT scale = std::numeric_limits<CapacityT>::max();
   for (auto [k, v] : subdemand) {
     assert(demand_.find(k) != demand_.end() && "input must be a subdemand");
-    scale = std::min(scale, demand_[k] / v);
+    if (v != 0) scale = std::min(scale, demand_[k] / v);
   }
   assert(scale >= 1 && "input must be a subdemand");
   MultiCommodityDemand scaled_up_subdemand = subdemand;
@@ -202,21 +204,57 @@ std::vector<CapacityT> FlowDecomposition::Route(
 namespace flow_rounding {
 
 struct V {
-  CapacityT min_flow;
-  Vertex min_vertex;
+  CapacityT min_fwd_flow, min_bwd_flow;
+  Edge min_fwd_edge, min_bwd_edge;
+
+  V()
+      : min_fwd_flow(std::numeric_limits<CapacityT>::max()),
+        min_bwd_flow(std::numeric_limits<CapacityT>::max()),
+        min_fwd_edge(-1),
+        min_bwd_edge(-1) {}
+
+  V(CapacityT a, CapacityT b, Edge c, Edge d)
+      : min_fwd_flow(a), min_bwd_flow(b), min_fwd_edge(c), min_bwd_edge(d) {}
 
   V operator+(const V &rhs) const {
-    return min_flow < rhs.min_flow ? *this : rhs;
+    V result;
+    if (min_fwd_flow < rhs.min_fwd_flow) {
+      result.min_fwd_flow = min_fwd_flow;
+      result.min_fwd_edge = min_fwd_edge;
+    } else {
+      result.min_fwd_flow = rhs.min_fwd_flow;
+      result.min_fwd_edge = rhs.min_fwd_edge;
+    }
+    if (min_bwd_flow < rhs.min_bwd_flow) {
+      result.min_bwd_flow = min_bwd_flow;
+      result.min_bwd_edge = min_bwd_edge;
+    } else {
+      result.min_bwd_flow = rhs.min_bwd_flow;
+      result.min_bwd_edge = rhs.min_bwd_edge;
+    }
+    return result;
   }
 };
 
 struct U {
   CapacityT delta;
 
-  static U Compose(U lhs, U rhs) { return U{lhs.delta + rhs.delta}; }
+  U() : delta(0) {}
+  U(CapacityT d) : delta(d) {}
+
+  static U Compose(U lhs, U rhs) { return U(lhs.delta + rhs.delta); }
   static V Apply(U upd, V val) {
-    return V{val.min_flow + upd.delta, val.min_vertex};
+    if (val.min_fwd_flow == std::numeric_limits<CapacityT>::max()) {
+      assert(val.min_bwd_flow == std::numeric_limits<CapacityT>::max());
+      return val;
+    }
+    return V(val.min_fwd_flow - upd.delta, val.min_bwd_flow + upd.delta,
+             val.min_fwd_edge, val.min_bwd_edge);
   }
+  static V Reverse(V v) {
+    return V(v.min_bwd_flow, v.min_fwd_flow, v.min_bwd_edge, v.min_fwd_edge);
+  }
+  static U Reverse(U u) { return U(-u.delta); }
 };
 
 };  // namespace flow_rounding
@@ -231,17 +269,71 @@ std::vector<CapacityT> FlowRounding(const Graph &g,
   }
   assert(std::ranges::all_of(g.Vertices(),
                              [&](Vertex v) { return demand[v] % scale == 0; }));
-  using namespace flow_rounding;
-  std::vector<std::vector<std::pair<Edge, CapacityT>>> available(g.n);
 
-  LinkCutTree<U, V> lct(g.n);
+  using namespace flow_rounding;
+  LinkCutTree<U, V> link_cut_tree(g.n + g.m);
+
+  auto rounded_flow = flow;
+  for (auto &v : rounded_flow) v /= scale;
+
+  auto FinalizeEdge = [&](auto e) {
+    link_cut_tree.MakeRoot(g.head[e]);
+    auto value = link_cut_tree.QueryParentEdge(e + g.n);
+    assert(value.min_fwd_flow == 0 || value.min_bwd_flow == 0);
+    if (value.min_fwd_flow == 0) rounded_flow[e]++;
+  };
+
   for (Edge e : g.Edges()) {
-    if (flow[e] % scale != 0) {
-      available[g.tail[e]].emplace_back(e, scale - flow[e] % scale);
-      available[g.head[e]].emplace_back(e, flow[e] % scale);
+    if (g.head[e] == g.tail[e]) {
+      rounded_flow[e] = 0;
+      continue;
+    }
+    if (flow[e] % scale == 0) continue;
+    Vertex u = g.tail[e], v = g.head[e];
+    // Can send fwd flow in the forward direction and bwd flow in the backward
+    // direction.
+    CapacityT fwd = scale - flow[e] % scale, bwd = flow[e] % scale;
+    while (fwd > 0 && bwd > 0 &&
+           link_cut_tree.GetRoot(u) == link_cut_tree.GetRoot(v)) {
+      link_cut_tree.MakeRoot(u);
+      V value = link_cut_tree.QueryPathToRoot(v);
+      if (value.min_fwd_flow == 0 || value.min_bwd_flow == 0) {
+        Edge z =
+            value.min_fwd_flow == 0 ? value.min_fwd_edge : value.min_bwd_edge;
+        FinalizeEdge(z);
+        Vertex p = link_cut_tree.GetParent(z + g.n);
+        assert(p == g.tail[z] || p == g.head[z]);
+        Vertex q = g.tail[z] ^ g.head[z] ^ p;
+        assert(link_cut_tree.GetParent(q) == z + g.n);
+        link_cut_tree.CutParent(q);
+        link_cut_tree.CutParent(z + g.n);
+      } else {
+        CapacityT fwd_send = std::min(value.min_fwd_flow, fwd);
+        CapacityT bwd_send = std::min(value.min_bwd_flow, bwd);
+        CapacityT send = fwd_send < bwd_send ? fwd_send : -bwd_send;
+        link_cut_tree.UpdatePathToRoot(v, U(send));
+        fwd -= send;
+        bwd += send;
+      }
+    }
+    if (fwd > 0 && bwd > 0) {
+      link_cut_tree.MakeRoot(u);
+      link_cut_tree.Link(u, e + g.n, V{});
+      link_cut_tree.Link(e + g.n, v, V{fwd, bwd, e, e});
+    } else {
+      if (fwd == 0) rounded_flow[e]++;
     }
   }
-  // TODO: Finish implementation
-  while (true) {
+  for (Edge e : g.Edges()) {
+    if (link_cut_tree.GetParent(e + g.n) != -1) FinalizeEdge(e);
   }
+  {
+    std::vector<CapacityT> rounded_demand(g.n);
+    for (Edge e : g.Edges()) {
+      rounded_demand[g.tail[e]] += rounded_flow[e] * scale;
+      rounded_demand[g.head[e]] -= rounded_flow[e] * scale;
+    }
+    assert(rounded_demand == demand);
+  }
+  return rounded_flow;
 }

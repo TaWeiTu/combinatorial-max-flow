@@ -14,6 +14,7 @@
  * Need V + V -> V
  * Need U::Apply(U, V) -> V
  * Need U::Compose(U, U) -> U
+ * Need U::Reverse(V) -> V
  * Need V() and U()
  **/
 
@@ -26,7 +27,7 @@ class LinkCutTree {
     }
   }
 
-  virtual void Link(Vertex child, Vertex parent, V edge_value) {
+  void Link(Vertex child, Vertex parent, V edge_value) {
     nodes_[child]->Access();
     nodes_[parent]->Access();
     assert(!nodes_[child]->pfa && !nodes_[child]->fa);
@@ -35,7 +36,7 @@ class LinkCutTree {
     nodes_[child]->Pull();
   }
 
-  virtual void CutParent(Vertex u) {
+  void CutParent(Vertex u) {
     nodes_[u]->Access();
     assert(nodes_[u]->child[0]);
     nodes_[u]->value = V();
@@ -44,28 +45,38 @@ class LinkCutTree {
     nodes_[u]->Pull();
   }
 
-  virtual Vertex GetRoot(Vertex u) {
+  Vertex GetRoot(Vertex u) {
     auto p = nodes_[u].get();
     p->Access();
-    p->Splay();
     while (p->child[0]) p = p->child[0];
     p->Splay();
     return p->id;
   }
 
-  virtual V QueryParentEdge(Vertex u) {
+  V QueryParentEdge(Vertex u) {
     nodes_[u]->Splay();
     return nodes_[u]->value;
   }
 
-  virtual V QueryPathToRoot(Vertex u) {
+  V QueryPathToRoot(Vertex u) {
     nodes_[u]->Access();
     return nodes_[u]->aggregation;
   }
 
-  virtual void UpdatePathToRoot(Vertex u, U update) {
+  void UpdatePathToRoot(Vertex u, U update) {
     nodes_[u]->Access();
     nodes_[u]->Update(update);
+  }
+
+  void MakeRoot(Vertex u) { nodes_[u]->MakeRoot(); }
+  bool IsRoot(Vertex u) { return u == GetRoot(u); }
+
+  Vertex GetParent(Vertex u) {
+    nodes_[u]->Access();
+    if (!nodes_[u]->child[0]) return -1;
+    auto p = nodes_[u]->child[0];
+    while (p->child[1]) p = p->child[1];
+    return p->id;
   }
 
  private:
