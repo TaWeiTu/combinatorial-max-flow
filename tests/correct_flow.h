@@ -52,7 +52,7 @@ struct Dinic {
   }
   bool leftOfMinCut(int a) { return lvl[a] != 0; }
 };
-CapacityT MaximumFlow(Graph g, const auto& demand) {
+inline CapacityT MaximumFlow(Graph g, const auto& demand) {
   Dinic mf(g.n + 2);
   int sink = g.n, source = g.n + 1;
   for (auto e : g.Edges()) {
@@ -62,6 +62,14 @@ CapacityT MaximumFlow(Graph g, const auto& demand) {
   for (auto v : g.Vertices()) {
     if (demand[v] < 0) mf.addEdge(v, sink, -demand[v]);
     if (demand[v] > 0) mf.addEdge(source, v, demand[v]);
+  }
+  return mf.calc(source, sink);
+}
+inline CapacityT MaximumSTFlow(Graph g, Vertex source, Vertex sink) {
+  Dinic mf(g.n);
+  for (auto e : g.Edges()) {
+    auto [x, y, c] = g.EdgeInfo(e);
+    mf.addEdge(x, y, c);
   }
   return mf.calc(source, sink);
 }

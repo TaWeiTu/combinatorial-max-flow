@@ -100,7 +100,7 @@ TEST_CASE("respecting order", "[order]") {
                                           {0, 5, 1},
                                           {9, 10, 2},
                                       });
-    std::vector<WeightT> level;
+    std::vector<int> level;
     for (auto c : g.capacity) level.emplace_back(c);
     auto order = RespectingOrder(g, level);
     // this is the unique answer

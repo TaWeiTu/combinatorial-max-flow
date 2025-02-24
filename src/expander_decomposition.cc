@@ -70,8 +70,10 @@ class LeafWitness : public Witness {
     std::vector<std::array<MultiCommodityDemand, 2>> demand_per_round(R);
     for (Edge e : expander_.Edges()) {
       auto [r, rev] = expander_edge_map_[e];
-      demand_per_round[r][rev][std::make_pair(
-          expander_.tail[e], expander_.head[e])] += flow_on_expander[e];
+      auto tail = expander_.tail[e], head = expander_.head[e];
+      if (rev) std::swap(tail, head);
+      demand_per_round[r][rev][std::make_pair(tail, head)] +=
+          flow_on_expander[e];
     }
     std::vector<CapacityT> flow(sg_.shortcut.m);
     for (int r = 0; r < R; ++r) {
@@ -177,8 +179,16 @@ class MatchingPlayerImpl : public MatchingPlayer {
     for (int rev = 0; rev < 2; ++rev) {
       auto [value, flow, c] =
           WeightedPushRelabelOnShortcut(sg_[rev], demand, 50 * phi_);
-      for (Vertex v = 0; v < n; ++v)
-        cut[v] = cut[v] || (!bipartition[v] && c[v]);
+      for (Vertex v = 0; v < n; ++v) cut[v] = cut[v] || c[v];
+      // cut[v] = cut[v] || (!bipartition[v] && c[v]);
+      // TODO: now we (incorrectly) return the actual cut, and not just the cut
+      // on the subset on the source side. This is so that the CMG can return
+      // forward the cut (if it just had the cut restricted to the source side,
+      // that cut might no longer be sparse (and let to infinite recursion in
+      // the expander hierarchy)). One potential problem right now is that if we
+      // find a out-sparse and in-sparse cut seperately, and then return the
+      // union cut it is neither out- nor in-sparse. Likely we need to return
+      // the two cuts seperately...
       fd[rev] = FlowDecomposition(sg_[rev].shortcut, flow);
       for (auto [k, v] : fd[rev].Demand()) {
         auto tail = k.first, head = k.second;
@@ -195,7 +205,9 @@ class MatchingPlayerImpl : public MatchingPlayer {
     for (int r = 0; r < std::ssize(fd_); ++r) {
       for (int rev = 0; rev < 2; ++rev) {
         for (auto [k, v] : fd_[r][rev].Demand()) {
-          expander.AddEdge(k.first, k.second, v);
+          auto tail = k.first, head = k.second;
+          if (rev) std::swap(tail, head);
+          expander.AddEdge(tail, head, v);
           expander_edge_map.emplace_back(r, rev);
         }
       }
@@ -238,7 +250,7 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
   MatchingPlayerImpl matching_player(sg, inv_phi);
   auto result = CutMatchingGame(demand, &matching_player);
 
-  std::vector<int> new_level(g.m);
+  std::vector<int> new_level = level;
 
   if (std::holds_alternative<std::vector<bool>>(result)) {
     // found a balanced sparse cut: recurse on both sides

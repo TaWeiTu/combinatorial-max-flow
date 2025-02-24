@@ -2,8 +2,11 @@
 
 #include <algorithm>
 #include <cassert>
+#include <deque>
+#include <iostream>
 #include <optional>
 #include <random>
+#include <ranges>
 #include <tuple>
 #include <variant>
 #include <vector>
@@ -29,7 +32,7 @@ class NonStopCutMatchingGame {
   const CapacityT total_demand_;
 
   std::vector<Vertex> A_;  // alive vertices
-  std::vector<std::vector<std::tuple<Vertex, Vertex, D>>> matchings_;
+  std::deque<std::vector<std::tuple<Vertex, Vertex, D>>> matchings_;
 
   std::mt19937_64 rng_gen_;
   std::normal_distribution<D> gaussian_;
@@ -43,7 +46,7 @@ NonStopCutMatchingGame::NonStopCutMatchingGame(
       matching_player_(m),
       total_demand_(std::accumulate(demand.begin(), demand.end(), 0)),
       A_(n_),
-      rng_gen_(std::random_device{}()),
+      rng_gen_(42),  // rng_gen_(std::random_device{}()), // TODO: change back?
       gaussian_(0, 1) {
   std::iota(A_.begin(), A_.end(), 0);
 }
@@ -70,12 +73,17 @@ std::vector<D> NonStopCutMatchingGame::ProjectByF(std::vector<D> r) {
       // TODO: this does not quite seem correct to me, double check!
       // r[x] += c * (old_r[x] / demand_[x] - old_r[y] / demand_[y]) / 2;
       // auto flow = c * (old_r[x] / demand_[x] - old_r[y] / demand_[y]) / 2;
-      auto flow = c / 2.0;
-      r[y] -= flow;
-      r[x] += flow;
+      auto flow = c / D(2 * demand_[x]) * old_r[x];
+      r[x] -= flow;
+      r[y] += flow;
     }
   }
-  for (int v = 0; v < n_; ++v) r[v] /= demand_[v];
+  for (int v = 0; v < n_; ++v) {
+    if (demand_[v] == 0)
+      r[v] = 0;
+    else
+      r[v] /= demand_[v];
+  }
   return r;
 }
 
@@ -118,6 +126,26 @@ std::optional<std::vector<bool>> NonStopCutMatchingGame::DoRound() {
   auto source = TakePrefix(demand_A / 8, A_.begin());
   auto sink = TakePrefix((demand_A + 1) / 2, A_.rbegin());
 
+  if (false) {  // TODO: remove debug info
+    std::cerr << "F=\n";
+    for (auto i : std::views::iota(0, n_)) {
+      std::vector<D> ei(n_);
+      ei[i] = 1;
+      ei = ProjectByF(ei);
+      for (auto a : ei) std::cerr << a << " ";
+      std::cerr << std::endl;
+    }
+    std::cerr << "d[";
+    for (auto a : demand_) std::cerr << a << " ";
+    std::cerr << "]\n";
+    std::cerr << "s[";
+    for (auto a : source) std::cerr << a << " ";
+    std::cerr << "]\n";
+    std::cerr << "t[";
+    for (auto a : sink) std::cerr << a << " ";
+    std::cerr << "]\n";
+  }
+
   std::vector<bool> bipartition(n_);
   std::vector<CapacityT> subdemand(n_);
 
@@ -126,14 +154,19 @@ std::optional<std::vector<bool>> NonStopCutMatchingGame::DoRound() {
     bipartition[v] = (source[v] <= sink[v]);
   }
 
-  // TODO: Now Match returns a matching in both directions.
   auto [cut, matching_bidir, scale] =
       matching_player_->Match(subdemand, bipartition);
-  matchings_.emplace_back();
-  for (const auto &m : matching_bidir) {
-    for (const auto &[x, y, c] : m)
-      matchings_.back().emplace_back(x, y, D(c) / D(scale));
+
+  // To certify both out and in expansion, we multiply the matchings (both
+  // directions) both to the front and back of the flow matrix F.
+  // TODO: verify if this is correct.
+  //  (at least it makes the flow matrix look uniform at the end)
+  std::vector<std::tuple<Vertex, Vertex, D>> matching;
+  for (const auto &[x, y, c] : matching_bidir | std::views::join) {
+    matching.emplace_back(x, y, D(c) / D(scale));
   }
+  matchings_.emplace_back(matching);
+  matchings_.emplace_front(matching);
 
   CapacityT demand_S = 0;
   for (Vertex v = 0; v < n_; ++v)
