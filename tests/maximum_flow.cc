@@ -5,6 +5,7 @@
 
 #include "correct_flow.h"
 #include "random_graph_generator.h"
+
 using namespace std;
 
 TEST_CASE("maximum flow on small fixed graphs", "[mf]") {
@@ -65,5 +66,13 @@ TEST_CASE("maximum flow on small fixed graphs", "[mf]") {
     auto [flow_value, flow] = MaximumFlow(g, 1, 2);
 
     REQUIRE(flow_value == 24);
+  }
+
+  SECTION("failed previously 3") {
+    auto g = Graph::FromEdgeList(5, {{1, 2, 24}, {2, 3, 91}, {0, 3, 79}});
+
+    auto [flow_value, flow] = MaximumFlow(g, 0, 3);
+
+    REQUIRE(flow_value == 79);
   }
 }

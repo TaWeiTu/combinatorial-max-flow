@@ -20,6 +20,10 @@ struct ShortcutGraph {
     auto res = *this;
     res.without_shortcut = res.without_shortcut.Reverse();
     res.shortcut = res.shortcut.Reverse();
+    for (auto &a : res.tau) a = without_shortcut.n - a - 1;
+    for (auto &[a, b, c] : res.star_edge_map) c = StarEdgeDirection(c ^ 1);
+    for (auto &l : res.inv_star_edge_map)
+      for (auto &a : l) std::swap(a[0], a[1]);
     return res;
   }
 
@@ -32,7 +36,7 @@ struct ShortcutGraph {
   std::vector<std::vector<std::array<Edge, 2>>> inv_star_edge_map;
 
   ShortcutGraph() = default;
-  ShortcutGraph(const Graph& g, std::vector<int> levels, CapacityT scale,
+  ShortcutGraph(const Graph &g, std::vector<int> levels, CapacityT scale,
                 bool skip_top_level);
 
   Edge StarEdge(int l, Vertex v, StarEdgeDirection dir) const {
