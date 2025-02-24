@@ -229,8 +229,10 @@ WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
   for (auto e : g.Edges()) total_capacity += sg.without_shortcut.capacity[e];
 
   // TODO: verify that h is set correctly
-  WeightT h =
-      WeightT(g.n * (6 * sg.L * sg.scale + 10 * kappa * log2(total_capacity)));
+  WeightT h = std::max<WeightT>(
+      1, g.n * (6 * sg.L * sg.scale + 10 * kappa * log2(total_capacity)));
+  // faster for small graphs to limit h to n * w_max
+  if (!w.empty()) h = std::min(h, g.n * std::ranges::max(w));
 
   auto [flow_value, flow, residual_demand] =
       WeightedPushRelabel(g, demand, w, h);

@@ -38,7 +38,7 @@ class NonStopCutMatchingGame {
 NonStopCutMatchingGame::NonStopCutMatchingGame(
     const std::vector<CapacityT> &demand, MatchingPlayer *m)
     : n_(std::ssize(demand)),
-      rounds_(10 * pow(log2(n_ + 10), 2)),  // TODO: set rounds more carefully
+      rounds_(2 * pow(log2(n_ + 10), 2)),  // TODO: set rounds more carefully
       demand_(demand),
       matching_player_(m),
       total_demand_(std::accumulate(demand.begin(), demand.end(), 0)),
@@ -119,7 +119,7 @@ std::optional<std::vector<bool>> NonStopCutMatchingGame::DoRound() {
 
   for (Vertex v = 0; v < n_; ++v) {
     subdemand[v] = abs(source[v] - sink[v]);
-    bipartition[v] = (source[v] > sink[v]);
+    bipartition[v] = (source[v] <= sink[v]);
   }
 
   auto [cut, matching] = matching_player_->Match(subdemand, bipartition);
@@ -132,6 +132,8 @@ std::optional<std::vector<bool>> NonStopCutMatchingGame::DoRound() {
   const CapacityT balance_factor = 10 * rounds_;
   if (balance_factor * demand_S >= total_demand_) {
     // found a reasonably balanced cut, return early
+    assert(count(cut.begin(), cut.end(), false) &&
+           count(cut.begin(), cut.end(), true) && "must be non-trivial cut");
     return cut;
   }
 

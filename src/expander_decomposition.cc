@@ -223,7 +223,16 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
         subgraphs[1], shortcut_subgraphs[1], std::move(subgraph_witness[1]));
     return std::make_tuple(new_level, std::move(witness), sg);
   } else {
-    // certified that a large portion of demand is expanding
+    if (std::holds_alternative<Expanding>(result)) {
+      // certified that everything was expanding: return the witness
+      return std::make_tuple(level, std::move(matching_player.ExtractWitness()),
+                             sg);
+    }
+
+    // certified that a large portion of demand is expanding:
+    //  * we extract this expanding demand, and rerun the cmg on it to build a
+    //  witness.
+    //  * we promote the non-expanding part (small fraction) to the next level.
     auto subdemand = std::get<std::vector<CapacityT>>(result);
     assert(
         std::accumulate(subdemand.begin(), subdemand.end(), CapacityT(0)) * 8 >=
