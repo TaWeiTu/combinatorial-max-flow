@@ -74,7 +74,7 @@ std::vector<int> Graph::SCC() const {
 
 std::vector<int> RespectingOrder(const Graph& g,
                                  const std::vector<int>& levels) {
-  int max_l = std::ranges::max(levels) + 1;
+  int max_l = levels.empty() ? -1 : std::ranges::max(levels) + 1;
   std::vector<Vertex> order(g.n);
   std::iota(order.begin(), order.end(), 0);
   for (int i = 0; i < max_l; ++i) {

@@ -52,6 +52,12 @@ WeightedPushRelabel(Graph g, std::vector<CapacityT> demand,
   assert(g.m == ssize(w));
   assert(g.n == ssize(demand));
 
+  if (g.m == 0) return {0, {}, demand};  // no edges, no flow
+
+  // h never needs to be larger than n * max_weight.
+  // this significantly speeds up computation on small instances
+  h = std::min(h, g.n * std::ranges::max(w));
+
   std::vector edges_at_height(g.n, std::vector<std::vector<Edge>>(9 * h + 1));
   for (Edge e : g.Edges()) {
     if (g.tail[e] == g.head[e] || g.capacity[e] == 0) continue;
@@ -220,10 +226,11 @@ WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
   // for (auto &d : demand) d *= sg.scale;
 
   CapacityT total_capacity = 0;
-  for (auto e : g.Edges()) total_capacity += g.capacity[e];
+  for (auto e : g.Edges()) total_capacity += sg.without_shortcut.capacity[e];
 
+  // TODO: verify that h is set correctly
   WeightT h =
-      WeightT(g.n * (6 * sg.L * sg.scale + 100 * kappa * log2(total_capacity)));
+      WeightT(g.n * (6 * sg.L * sg.scale + 10 * kappa * log2(total_capacity)));
 
   auto [flow_value, flow, residual_demand] =
       WeightedPushRelabel(g, demand, w, h);
@@ -232,8 +239,8 @@ WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
   for (auto d : demand) (d > 0 ? total_source : total_sink) += d;
 
   if (flow_value == std::min(total_source, total_sink)) {
-    // TODO: how should the cut look like here? for not just empty vector
-    return {flow_value, flow, {}};
+    // TODO: how should the cut look like here?
+    return {flow_value, flow, std::vector(sg.without_shortcut.n, false)};
   }
 
   // Calculate distance layers S[i]

@@ -46,6 +46,12 @@ std::vector<CapacityT> FlowUnfolding::Unfold(
         }));
     flow_on_shortcut = reroute;
   }
+
+  // flow should now be a multiple of scale_, so it is safe to scale down
+  for (auto &f : flow_on_shortcut) {
+    assert(f % scale_ == 0);
+    f /= scale_;
+  }
   return flow_on_shortcut;
 }
 
@@ -68,8 +74,8 @@ std::pair<std::vector<int>, FlowUnfolding> BuildExpanderHierarchy(Graph g) {
   FlowUnfolding fu(g, scale, inv_phi);
   while (true) {
     auto [new_level, witness, sg] = ExpanderDecomposition(g, level, scale);
-    if (level == new_level) break;
     fu.AddLevel(sg, std::move(witness));
+    if (level == new_level) break;
     level = new_level;
   }
   return std::make_pair(level, std::move(fu));

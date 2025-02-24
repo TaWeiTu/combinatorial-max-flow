@@ -37,13 +37,16 @@ class NonStopCutMatchingGame {
 
 NonStopCutMatchingGame::NonStopCutMatchingGame(
     const std::vector<CapacityT> &demand, MatchingPlayer *m)
-    : n_(ssize(demand_)),
+    : n_(std::ssize(demand)),
       rounds_(10 * pow(log2(n_ + 10), 2)),  // TODO: set rounds more carefully
       demand_(demand),
       matching_player_(m),
-      total_demand_(std::accumulate(demand_.begin(), demand_.end(), 0)),
+      total_demand_(std::accumulate(demand.begin(), demand.end(), 0)),
+      A_(n_),
       rng_gen_(std::random_device{}()),
-      gaussian_(0, 1) {}
+      gaussian_(0, 1) {
+  std::iota(A_.begin(), A_.end(), 0);
+}
 
 std::vector<D> NonStopCutMatchingGame::RandomVectorOrthogonalToOne() {
   // Project a n-dimensional gaussian distribution to the hyperplane orthogonal
@@ -80,10 +83,10 @@ NonStopCutMatchingGame::Run() {
 
   if (std::ssize(A_) == n_) return Expanding{};  // no cuts
 
-  // TODO: is this the right way of calculating the final subdemand_?
-  std::vector<CapacityT> subdemand_(n_);
-  for (auto v : A_) subdemand_[v] = demand_[v];
-  return subdemand_;
+  // TODO: is this the right way of calculating the final subdemand?
+  std::vector<CapacityT> subdemand(n_);
+  for (auto v : A_) subdemand[v] = demand_[v];
+  return subdemand;
 }
 
 std::optional<std::vector<bool>> NonStopCutMatchingGame::DoRound() {

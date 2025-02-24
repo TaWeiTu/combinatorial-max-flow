@@ -14,6 +14,15 @@
 
 namespace {
 
+class EmptyWitness : public Witness {  // for an empty graph
+ public:
+  EmptyWitness() {}
+  std::vector<CapacityT> Route(const std::vector<CapacityT> &demand) {
+    assert(demand.empty());
+    return {};
+  }
+};
+
 class LeafWitness : public Witness {
  public:
   LeafWitness(Graph expander, CapacityT phi, ShortcutGraph sg,
@@ -154,8 +163,14 @@ class MatchingPlayerImpl : public MatchingPlayer {
 std::tuple<std::vector<int>, std::unique_ptr<Witness>, ShortcutGraph>
 ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
                       CapacityT scale) {
+  ShortcutGraph sg(g, level, scale);
+  if (g.n == 1 || g.m == 0) {
+    return std::make_tuple(std::vector<int>{}, std::make_unique<EmptyWitness>(),
+                           sg);
+  }
+
   std::vector<CapacityT> demand(g.n);
-  const int max_l = *std::max_element(level.begin(), level.end());
+  const int max_l = std::ranges::max(level);
   std::vector<Edge> top_level;
   for (auto e : g.Edges())
     if (level[e] == max_l) top_level.push_back(e);
@@ -163,8 +178,7 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
     demand[g.tail[e]] += g.capacity[e];
     demand[g.head[e]] += g.capacity[e];
   }
-  ShortcutGraph sg(g, level, scale);
-  const CapacityT phi = 100;  // TODO: figuer out the value of phi.
+  const CapacityT phi = 100;  // TODO: figure out the value of phi.
   MatchingPlayerImpl matching_player(sg, phi);
   auto result = CutMatchingGame(demand, &matching_player);
 
@@ -188,15 +202,14 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
     std::vector<std::unique_ptr<Witness>> subgraph_witness(2);
     for (int i = 0; i < 2; ++i) {
       std::vector<Vertex> vtx;
-      std::vector<int> subgraph_level;
       for (Vertex v : g.Vertices()) {
-        if (cut[v]) {
-          vtx.push_back(v);
-          subgraph_level.push_back(level[v]);
-        }
-        cut[v] = !cut[v];
+        if (cut[v] == i) vtx.push_back(v);
       }
       subgraphs[i] = g.VertexSubgraph(vtx);
+      std::vector<int> subgraph_level(subgraphs[i].g.m);
+      for (Edge e : subgraphs[i].g.Edges()) {
+        subgraph_level[e] = level[subgraphs[i].inv_edge_map[e]];
+      }
       std::vector<int> subgraph_new_level;
       std::tie(subgraph_new_level, subgraph_witness[i], shortcut_subgraphs[i]) =
           ExpanderDecomposition(subgraphs[i].g, subgraph_level, scale);
