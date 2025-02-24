@@ -5,4 +5,4 @@
 using Vertex = int;
 using Edge = int;
 using CapacityT = int64_t;
-using WeightT = int;
+using WeightT = int64_t;

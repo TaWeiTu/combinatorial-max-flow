@@ -84,6 +84,9 @@ std::pair<std::vector<int>, FlowUnfolding> BuildExpanderHierarchy(Graph g) {
     if (level == new_level) break;
     level = new_level;
   }
+  std::cerr << "level[";
+  for(auto a : level) std::cerr << a << " ";
+  std::cerr << "]\n";
   fu.AddLevel(ShortcutGraph(g, level, scale, /*skip_top_level=*/false),
               nullptr);
   return std::make_pair(level, std::move(fu));
