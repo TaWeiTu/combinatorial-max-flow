@@ -25,7 +25,8 @@ struct ShortcutGraph {
   std::vector<std::vector<std::array<Edge, 2>>> inv_star_edge_map;
 
   ShortcutGraph() = default;
-  ShortcutGraph(const Graph& g, std::vector<int> levels, CapacityT scale);
+  ShortcutGraph(const Graph& g, std::vector<int> levels, CapacityT scale,
+                bool skip_top_level);
 
   Edge StarEdge(int l, Vertex v, StarEdgeDirection dir) const {
     return inv_star_edge_map[l][v][dir];

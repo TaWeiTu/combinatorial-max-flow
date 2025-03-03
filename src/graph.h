@@ -79,6 +79,9 @@ struct Subgraph {
 
 std::ostream& operator<<(std::ostream& os, const Graph& g);
 
+std::vector<CapacityT> FlowToDemand(const Graph& g,
+                                    const std::vector<CapacityT>& flow);
+
 // Compute a vertex ordering of `g` that respects the hierarchy induced by
 // `levels`.
 //

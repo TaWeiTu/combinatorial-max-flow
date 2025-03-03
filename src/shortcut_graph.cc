@@ -4,11 +4,11 @@
 #include <ranges>
 
 ShortcutGraph::ShortcutGraph(const Graph& g, std::vector<int> levels,
-                             CapacityT scale)
+                             CapacityT scale, bool skip_top_level)
     : without_shortcut(g),
       shortcut(g * scale),
       levels(levels),
-      L(levels.empty() ? -1 : std::ranges::max(levels)),
+      L(levels.empty() ? -1 : std::ranges::max(levels) - skip_top_level),
       scale(scale),
       weights(g.m),
       tau(RespectingOrder(g, levels)),
@@ -21,7 +21,7 @@ ShortcutGraph::ShortcutGraph(const Graph& g, std::vector<int> levels,
 
   inv_star_edge_map.assign(L + 1, std::vector<std::array<Edge, 2>>(g.n));
   // the loop skips l = L, since these are the top-level edge sets
-  for (int l = 0; l < L; ++l) {
+  for (int l = 0; l <= L; ++l) {
     auto scc = g.EdgeSubgraph([&](Edge e) { return levels[e] <= l; }).SCC();
     std::vector<CapacityT> tail_capacity(g.n);
     for (Edge e : g.Edges()) {

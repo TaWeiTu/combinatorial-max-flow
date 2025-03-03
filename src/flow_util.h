@@ -33,6 +33,10 @@ class FlowDecomposition {
 //
 // Given a flow f such that the demand d it routes is a multiple of some
 // integral scale s, return a flow f' such that f' <= ceil(f/s) that routes d/s.
-std::vector<CapacityT> FlowRounding(const Graph& g,
-                                    const std::vector<CapacityT>& flow,
-                                    CapacityT scale);
+std::vector<CapacityT> FlowRoundingExact(const Graph& g,
+                                          const std::vector<CapacityT>& flow,
+                                          CapacityT scale);
+// When the demand is not a multiple of s, the flow f' <= ceil(f/s) only routes
+// floor(d/s).
+std::vector<CapacityT> FlowRoundingRoundedDown(
+    const Graph& g, const std::vector<CapacityT>& flow, CapacityT scale);

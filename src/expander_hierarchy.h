@@ -17,6 +17,8 @@ class FlowUnfolding {
   std::vector<CapacityT> Unfold(std::vector<CapacityT> flow_on_shortcut);
   ShortcutGraph GetShortcutGraph() const { return sg_.back(); }
 
+  CapacityT Scale() const { return scale_; }
+
  private:
   std::vector<std::unique_ptr<Witness>> witness_;
   std::vector<ShortcutGraph> sg_;
@@ -36,4 +38,6 @@ class ExpanderHierarchy {
   std::vector<CapacityT> Unfold(std::vector<CapacityT> flow) {
     return fu_.Unfold(flow);
   }
+
+  CapacityT Scale() const { return fu_.Scale(); }
 };

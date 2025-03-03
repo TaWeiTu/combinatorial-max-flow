@@ -91,7 +91,6 @@ struct SplayNode {
 
   void Expose() {
     Splay();
-    Push();
     if (child[1]) {
       child[1]->fa = nullptr;
       child[1]->pfa = this;

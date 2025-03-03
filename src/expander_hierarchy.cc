@@ -5,6 +5,8 @@
 #include <cmath>
 #include <numeric>
 
+#include "flow_util.h"
+
 void FlowUnfolding::AddLevel(ShortcutGraph sg,
                              std::unique_ptr<Witness> witness) {
   sg_.push_back(sg);
@@ -13,46 +15,46 @@ void FlowUnfolding::AddLevel(ShortcutGraph sg,
 
 std::vector<CapacityT> FlowUnfolding::Unfold(
     std::vector<CapacityT> flow_on_shortcut) {
+  const int L = sg_.size();
+  // scale up the flow to control error in congestion incurred by rounding up
+  // each time.
+  for (auto& v : flow_on_shortcut) v *= L;
   for (int l = sg_.size() - 1; l > 0; --l) {
     assert(std::ssize(flow_on_shortcut) == sg_[l].shortcut.m &&
            "flow_on_shortcut is a flow on the level-l shortcut graph");
     assert(std::ranges::all_of(
-               sg_[l].shortcut.Edges(),
-               [&, k = sg_.size() - l](Edge e) {
-                 return flow_on_shortcut[e] <=
-                        (sg_[l].IsStarEdge(e)
-                             ? sg_[l].shortcut.capacity[e] * k
-                             : sg_[l].shortcut.capacity[e] / scale_ *
-                                   (scale_ + inv_phi_ * k * (k - 1) / 2));
-               }) &&
-           "the capacity blows on by a factor of (1+1/L) each time");
+        sg_[l].shortcut.Edges(), [&, k = sg_.size() - l](Edge e) {
+          return flow_on_shortcut[e] <=
+                 (sg_[l].IsStarEdge(e)
+                      ? sg_[l].shortcut.capacity[e] * (L + 2 * (k - 1))
+                      : sg_[l].shortcut.capacity[e] * L +
+                            sg_[l].shortcut.capacity[e] / scale_ * inv_phi_ *
+                                (L + 2 * (k - 1)));
+        }));
     std::vector<CapacityT> demand(g_.n);
-    assert(sg_[l].L == l);
+    assert(sg_[l].L == l - 1);
     for (Vertex v : g_.Vertices()) {
       demand[v] +=
-          flow_on_shortcut[sg_[l].StarEdge(l, v, ShortcutGraph::kToStar)];
+          flow_on_shortcut[sg_[l].StarEdge(l - 1, v, ShortcutGraph::kToStar)];
       demand[v] -=
-          flow_on_shortcut[sg_[l].StarEdge(l, v, ShortcutGraph::kFromStar)];
+          flow_on_shortcut[sg_[l].StarEdge(l - 1, v, ShortcutGraph::kFromStar)];
     }
-    auto reroute = witness_[l]->Route(demand);
+    std::cerr << "start routing\n";
+    auto reroute = witness_[l - 1]->Route(demand);
+    std::cerr << "done routing\n";
     assert(std::ssize(reroute) == sg_[l - 1].shortcut.m &&
            "rerouted on lower level shortcut graph");
-    assert(std::ranges::all_of(
-        sg_[l - 1].shortcut.Edges(), [&, k = sg_.size() - 1](Edge e) {
-          return reroute[e] <= (sg_[l - 1].IsStarEdge(e)
-                                    ? sg_[l - 1].shortcut.capacity[e]
-                                    : sg_[l - 1].shortcut.capacity[e] / scale_ *
-                                          (scale_ + inv_phi_ * k));
-        }));
     flow_on_shortcut = reroute;
   }
-
-  // flow should now be a multiple of scale_, so it is safe to scale down
-  for (auto &f : flow_on_shortcut) {
-    assert(f % scale_ == 0);
-    f /= scale_;
-  }
-  return flow_on_shortcut;
+  // // flow should now be a multiple of scale_, so it is safe to scale down
+  // for (auto &f : flow_on_shortcut) {
+  //   assert(f % scale_ == 0);
+  //   f /= scale_;
+  // }
+  // return flow_on_shortcut;
+  assert(std::ssize(flow_on_shortcut) == g_.m);
+  std::cerr << "here\n";
+  return FlowRoundingExact(g_, flow_on_shortcut, L);
 }
 
 namespace {
@@ -66,11 +68,10 @@ std::pair<std::vector<int>, FlowUnfolding> BuildExpanderHierarchy(Graph g) {
                                     std::log2(double(4) / 3))) +
                 1;
   // TODO: Check these values.
-  const CapacityT inv_phi = CapacityT(std::pow(std::log2(g.n), 10));
+  const CapacityT inv_phi = CapacityT(std::pow(std::log2(g.n), 8));
   // This corresopnds to 1/psi in the paper.
-  // Note that in the paper psi is set to phi/L but here we set it to psi/L^2.
-  // This is so that we can stay integral throughout the implementation.
-  const CapacityT scale = L * L * inv_phi;
+  const CapacityT scale = L * 500 * inv_phi;
+  std::cerr << "inv_phi = " << inv_phi << " psi = " << scale << "\n";
   FlowUnfolding fu(g, scale, inv_phi);
   while (true) {
     auto [new_level, witness, sg] = ExpanderDecomposition(g, level, scale);
@@ -78,6 +79,8 @@ std::pair<std::vector<int>, FlowUnfolding> BuildExpanderHierarchy(Graph g) {
     if (level == new_level) break;
     level = new_level;
   }
+  fu.AddLevel(ShortcutGraph(g, level, scale, /*skip_top_level=*/false),
+              nullptr);
   return std::make_pair(level, std::move(fu));
 }
 

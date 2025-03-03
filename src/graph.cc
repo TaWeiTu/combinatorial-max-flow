@@ -72,6 +72,16 @@ std::vector<int> Graph::SCC() const {
   return scc_id;
 }
 
+std::vector<CapacityT> FlowToDemand(const Graph& g,
+                                    const std::vector<CapacityT>& flow) {
+  std::vector<CapacityT> demand(g.n);
+  for (Edge e : g.Edges()) {
+    demand[g.tail[e]] += flow[e];
+    demand[g.head[e]] -= flow[e];
+  }
+  return demand;
+}
+
 std::vector<int> RespectingOrder(const Graph& g,
                                  const std::vector<int>& levels) {
   int max_l = levels.empty() ? -1 : std::ranges::max(levels) + 1;

@@ -40,7 +40,7 @@ TEST_CASE("maximum flow on small fixed graphs", "[mf]") {
 
     auto [flow_value, flow] = MaximumFlow(g, source, sink);
 
-    REQUIRE(flow_value == 7);
     REQUIRE(flow == vector<CapacityT>{7, 0, 7});
+    REQUIRE(flow_value == 7);
   }
 }

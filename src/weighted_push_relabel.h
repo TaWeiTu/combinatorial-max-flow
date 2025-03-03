@@ -39,9 +39,11 @@ std::tuple<CapacityT, std::vector<CapacityT>, std::vector<bool>>
 WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
                               CapacityT kappa);
 
-// computes and returns a flow exactly routing the demand on a phi-expander. The
-// flow has congestion O(log n / phi). Running time is O(n log^2 n / phi), given
-// that the graph is actually a phi-expander.
+// Computes and returns a flow exactly routing the demand on a phi-expander. If
+// the demand k-respects the degree of the expander, then the flow has value
+// f(e) <= k * O(log n / phi) * c(e).
+// The running time is O(n log^2 n / phi), given that the graph is actually a
+// phi-expander.
 // TODO: double check congestion and running time guarantees
 std::vector<CapacityT> PushRelabelOnExpander(Graph expander, int inv_phi,
                                              std::vector<CapacityT> demand);

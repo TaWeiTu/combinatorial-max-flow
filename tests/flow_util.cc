@@ -64,7 +64,7 @@ TEST_CASE("flow rounding", "[fr]") {
     g.AddEdge(1, 3, 0);
     g.AddEdge(0, 2, 0);
     g.AddEdge(2, 3, 0);
-    auto f = FlowRounding(g, {1, 1, 1, 1}, 2);
+    auto f = FlowRoundingExact(g, {1, 1, 1, 1}, 2);
   }
 }
 
@@ -113,7 +113,7 @@ TEST_CASE("flow rounding random graphs", "[fr][stress]") {
   CAPTURE(g, flow, scale);
 
   SECTION("is correct") {
-    auto rounded_flow = FlowRounding(g, flow, scale);
+    auto rounded_flow = FlowRoundingExact(g, flow, scale);
     REQUIRE(std::ranges::all_of(g.Edges(), [&](Edge e) {
       return rounded_flow[e] <= (flow[e] + scale - 1) / scale * scale;
     }));

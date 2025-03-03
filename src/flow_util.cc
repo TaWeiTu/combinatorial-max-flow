@@ -198,7 +198,7 @@ std::vector<CapacityT> FlowDecomposition::Route(
   for (auto &[k, v] : scaled_up_subdemand) v *= scale;
   auto scaled_up_flow =
       flow_decomposition::RouteInternal(g_, flow_, scaled_up_subdemand).second;
-  return FlowRounding(g_, scaled_up_flow, scale);
+  return FlowRoundingExact(g_, scaled_up_flow, scale);
 }
 
 namespace flow_rounding {
@@ -259,9 +259,9 @@ struct U {
 
 };  // namespace flow_rounding
 
-std::vector<CapacityT> FlowRounding(const Graph &g,
-                                    const std::vector<CapacityT> &flow,
-                                    CapacityT scale) {
+std::vector<CapacityT> FlowRoundingExact(const Graph &g,
+                                         const std::vector<CapacityT> &flow,
+                                         CapacityT scale) {
   std::vector<CapacityT> demand(g.n);
   for (Edge e : g.Edges()) {
     demand[g.tail[e]] += flow[e];
@@ -328,12 +328,34 @@ std::vector<CapacityT> FlowRounding(const Graph &g,
     if (link_cut_tree.GetParent(e + g.n) != -1) FinalizeEdge(e);
   }
   {
-    std::vector<CapacityT> rounded_demand(g.n);
-    for (Edge e : g.Edges()) {
-      rounded_demand[g.tail[e]] += rounded_flow[e] * scale;
-      rounded_demand[g.head[e]] -= rounded_flow[e] * scale;
-    }
+    auto rounded_demand = FlowToDemand(g, rounded_flow);
+    for (auto &v : rounded_demand) v *= scale;
     assert(rounded_demand == demand);
   }
   return rounded_flow;
+}
+std::vector<CapacityT> FlowRoundingRoundedDown(
+    const Graph &g, const std::vector<CapacityT> &flow, CapacityT scale) {
+  auto demand = FlowToDemand(g, flow);
+  auto new_graph = g;
+  Vertex s = new_graph.AddVertex();
+  auto new_flow = flow;
+  for (Vertex v : g.Vertices()) {
+    if (demand[v] % scale == 0) continue;
+    if (demand[v] > 0) {
+      new_graph.AddEdge(v, s);
+      new_flow.push_back(scale - demand[v] % scale);
+    } else {
+      new_graph.AddEdge(s, v);
+      new_flow.push_back(scale - std::abs(demand[v]) % scale);
+    }
+  }
+  auto rounded_flow = FlowRoundingExact(new_graph, new_flow, scale);
+  auto prefix = std::vector(rounded_flow.begin(), rounded_flow.begin() + g.m);
+  auto routed_demand = FlowToDemand(g, prefix);
+  assert(std::ranges::all_of(g.Vertices(), [&](Vertex v) {
+    return demand[v] * routed_demand[v] >= 0 &&
+           std::abs(routed_demand[v]) >= std::abs(demand[v]) / scale;
+  }));
+  return prefix;
 }
