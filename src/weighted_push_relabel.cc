@@ -202,13 +202,11 @@ std::vector<CapacityT> PushRelabelOnExpander(Graph expander, int inv_phi,
   std::vector<CapacityT> flow(expander.m);
   // TODO: figure out the right h
   WeightT h = WeightT(10 * inv_phi * log2(expander.n));
-  std::cerr << "h = " << h << "\n";
   while (total_demand > 0) {
     auto [v, f, rd] = WeightedPushRelabel(expander, demand, weights, h);
     for (Edge e : expander.Edges()) flow[e] += f[e];
     demand = rd;
     total_demand -= v;
-    std::cerr << "routed v = " << v << "\n";
     if (v == 0) {
       assert(total_demand == 0);
     }

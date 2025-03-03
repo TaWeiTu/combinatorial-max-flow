@@ -44,14 +44,17 @@ std::vector<CapacityT> FlowUnfolding::Unfold(
     std::cerr << "done routing\n";
     assert(std::ssize(reroute) == sg_[l - 1].shortcut.m &&
            "rerouted on lower level shortcut graph");
+    // map lower-level star edges as well
+    for (Vertex v : g_.Vertices()) {
+      for (int i = 0; i < l - 1; ++i) {
+        reroute[sg_[l].StarEdge(i, v, ShortcutGraph::kToStar)] +=
+            flow_on_shortcut[sg_[l].StarEdge(i, v, ShortcutGraph::kToStar)];
+        reroute[sg_[l].StarEdge(i, v, ShortcutGraph::kFromStar)] +=
+            flow_on_shortcut[sg_[l].StarEdge(i, v, ShortcutGraph::kFromStar)];
+      }
+    }
     flow_on_shortcut = reroute;
   }
-  // // flow should now be a multiple of scale_, so it is safe to scale down
-  // for (auto &f : flow_on_shortcut) {
-  //   assert(f % scale_ == 0);
-  //   f /= scale_;
-  // }
-  // return flow_on_shortcut;
   assert(std::ssize(flow_on_shortcut) == g_.m);
   std::cerr << "here\n";
   return FlowRoundingExact(g_, flow_on_shortcut, L);

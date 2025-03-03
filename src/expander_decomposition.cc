@@ -17,8 +17,9 @@ namespace {
 class EmptyWitness : public Witness {  // for an empty graph
  public:
   EmptyWitness(int n, int m) : n_(n), m_(m) {}
+  virtual ~EmptyWitness() = default;
   std::vector<CapacityT> Route(const std::vector<CapacityT> &demand) {
-    assert(demand.size() == n_ &&
+    assert(std::ssize(demand) == n_ &&
            std::ranges::all_of(demand, [&](auto v) { return v == 0; }));
     return std::vector<CapacityT>(m_, 0);
   }
@@ -40,6 +41,7 @@ class LeafWitness : public Witness {
         sg_(sg),
         expander_edge_map_(expander_edge_map),
         fd_(fd) {}
+  virtual ~LeafWitness() = default;
   std::vector<CapacityT> Route(const std::vector<CapacityT> &demand) {
     // To make things integral, route the scaled up demand first instead.
     auto scaled_up_demand = demand;
@@ -105,6 +107,7 @@ class InternalWitness : public Witness {
         subgraphs_({s1, s2}),
         shortcut_subgraphs_({sg1, sg2}),
         child_witness_({std::move(w1), std::move(w2)}) {}
+  virtual ~InternalWitness() = default;
   std::vector<CapacityT> Route(const std::vector<CapacityT> &demand) {
     std::vector<std::vector<CapacityT>> subgraph_demand(2);
     for (int i = 0; i < 2; ++i) subgraph_demand[i].resize(subgraphs_[i].g.n);
@@ -262,8 +265,7 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
   } else {
     if (std::holds_alternative<Expanding>(result)) {
       // certified that everything was expanding: return the witness
-      return std::make_tuple(level, std::move(matching_player.ExtractWitness()),
-                             sg);
+      return std::make_tuple(level, matching_player.ExtractWitness(), sg);
     }
 
     // certified that a large portion of demand is expanding:
@@ -311,7 +313,7 @@ ExpanderDecomposition(const Graph &g, const std::vector<int> &level,
         CutMatchingGame(expanding_demand, &expanding_matching_player);
     assert(std::holds_alternative<Expanding>(expanding_result) &&
            "The input demand must be expanding");
-    return std::make_tuple(
-        new_level, std::move(expanding_matching_player.ExtractWitness()), sg);
+    return std::make_tuple(new_level,
+                           expanding_matching_player.ExtractWitness(), sg);
   }
 }
