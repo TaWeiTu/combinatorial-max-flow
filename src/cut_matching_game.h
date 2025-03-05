@@ -7,8 +7,9 @@
 
 class MatchingPlayer {
  public:
-  virtual std::pair<std::vector<bool>,
-                    std::vector<std::tuple<Vertex, Vertex, CapacityT>>>
+  virtual std::pair<
+      std::vector<bool>,
+      std::array<std::vector<std::tuple<Vertex, Vertex, CapacityT>>, 2>>
   Match(const std::vector<CapacityT> &subdemand,
         const std::vector<bool> &bipartition) = 0;
   MatchingPlayer() = default;

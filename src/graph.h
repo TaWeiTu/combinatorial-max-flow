@@ -34,6 +34,13 @@ struct Graph {
   Graph() = default;
   Graph(int n) : n(n), out_edges(n), in_edges(n) {}
 
+  Graph Reverse() const {
+    auto res = *this;
+    std::swap(res.out_edges, res.in_edges);
+    std::swap(res.head, res.tail);
+    return res;
+  }
+
   static Graph FromEdgeList(
       int n, const std::vector<std::tuple<Vertex, Vertex, CapacityT>>& edges) {
     Graph g;

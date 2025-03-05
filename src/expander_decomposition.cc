@@ -31,8 +31,8 @@ class EmptyWitness : public Witness {  // for an empty graph
 class LeafWitness : public Witness {
  public:
   LeafWitness(Graph expander, CapacityT phi, CapacityT kappa, ShortcutGraph sg,
-              std::vector<int> expander_edge_map,
-              std::vector<FlowDecomposition> fd)
+              std::vector<std::pair<int, int>> expander_edge_map,
+              std::vector<std::array<FlowDecomposition, 2>> fd)
       : Witness(),
         expander_(expander),
         scale_(sg.scale),
@@ -66,18 +66,20 @@ class LeafWitness : public Witness {
     // flow_on_expander[e] should be bounded by c[e] * k/psi * O(log n / phi)
     // for each expander edge e.
     const int R = fd_.size();
-    std::vector<MultiCommodityDemand> demand_per_round(R);
+    std::vector<std::array<MultiCommodityDemand, 2>> demand_per_round(R);
     for (Edge e : expander_.Edges()) {
-      int r = expander_edge_map_[e];
-      demand_per_round[r][std::make_pair(
+      auto [r, rev] = expander_edge_map_[e];
+      demand_per_round[r][rev][std::make_pair(
           expander_.tail[e], expander_.head[e])] += flow_on_expander[e];
     }
     std::vector<CapacityT> flow(sg_.shortcut.m);
     for (int r = 0; r < R; ++r) {
-      auto f = fd_[r].Route(demand_per_round[r]);
-      assert(std::ssize(f) == sg_.shortcut.m &&
-             "the flow is on the shortcut graph");
-      for (Edge e : sg_.shortcut.Edges()) flow[e] += f[e];
+      for (int rev = 0; rev < 2; ++rev) {
+        auto f = fd_[r][rev].Route(demand_per_round[r][rev]);
+        assert(std::ssize(f) == sg_.shortcut.m &&
+               "the flow is on the shortcut graph");
+        for (Edge e : sg_.shortcut.Edges()) flow[e] += f[e];
+      }
     }
     std::cerr << "flow = ";
     for (auto &v : flow) std::cerr << v << " ";
@@ -94,8 +96,8 @@ class LeafWitness : public Witness {
   ShortcutGraph sg_;
   // map each edge in the expander into the round number (of the cut-matching
   // game) when it was added to the expander.
-  std::vector<int> expander_edge_map_;
-  std::vector<FlowDecomposition> fd_;
+  std::vector<std::pair<int, int>> expander_edge_map_;
+  std::vector<std::array<FlowDecomposition, 2>> fd_;
 };
 
 class InternalWitness : public Witness {
@@ -156,45 +158,57 @@ class InternalWitness : public Witness {
 class MatchingPlayerImpl : public MatchingPlayer {
  public:
   MatchingPlayerImpl(const ShortcutGraph &sg, CapacityT phi)
-      : MatchingPlayer(), sg_(sg), phi_(phi) {}
+      : MatchingPlayer(), sg_({sg, sg.Reverse()}), phi_(phi) {}
   ~MatchingPlayerImpl() = default;
   std::pair<std::vector<bool>,
-            std::vector<std::tuple<Vertex, Vertex, CapacityT>>>
+            std::array<std::vector<std::tuple<Vertex, Vertex, CapacityT>>, 2>>
   Match(const std::vector<CapacityT> &subdemand,
         const std::vector<bool> &bipartition) {
-    const int n = sg_.without_shortcut.n;
+    const int n = sg_[0].without_shortcut.n;
     std::vector<CapacityT> demand(n);
     for (Vertex v = 0; v < n; ++v) {
       demand[v] = bipartition[v] ? -subdemand[v] : subdemand[v];
     }
-    auto [value, flow, cut] =
-        WeightedPushRelabelOnShortcut(sg_, demand, 50 * phi_);
-    auto &m = fd_.emplace_back(sg_.shortcut, flow);
-    std::vector<std::tuple<Vertex, Vertex, CapacityT>> matching;
-    for (auto [k, v] : m.Demand()) matching.emplace_back(k.first, k.second, v);
+    auto &fd = fd_.emplace_back();
+    std::vector<bool> cut(n);
+    std::array<std::vector<std::tuple<Vertex, Vertex, CapacityT>>, 2> matching;
+    for (int rev = 0; rev < 2; ++rev) {
+      auto [value, flow, c] =
+          WeightedPushRelabelOnShortcut(sg_[rev], demand, 50 * phi_);
+      for (Vertex v = 0; v < n; ++v)
+        cut[v] = cut[v] || (!bipartition[v] && c[v]);
+      fd[rev] = FlowDecomposition(sg_[rev].shortcut, flow);
+      for (auto [k, v] : fd[rev].Demand()) {
+        auto tail = k.first, head = k.second;
+        if (rev) std::swap(tail, head);
+        matching[rev].emplace_back(tail, head, v);
+      }
+    }
     return std::make_pair(cut, matching);
   }
 
   std::unique_ptr<Witness> ExtractWitness() {
-    Graph expander(sg_.without_shortcut.n);
-    std::vector<int> expander_edge_map;
+    Graph expander(sg_[0].without_shortcut.n);
+    std::vector<std::pair<int, int>> expander_edge_map;
     for (int r = 0; r < std::ssize(fd_); ++r) {
-      for (auto [k, v] : fd_[r].Demand()) {
-        expander.AddEdge(k.first, k.second, v);
-        expander_edge_map.push_back(r);
+      for (int rev = 0; rev < 2; ++rev) {
+        for (auto [k, v] : fd_[r][rev].Demand()) {
+          expander.AddEdge(k.first, k.second, v);
+          expander_edge_map.emplace_back(r, rev);
+        }
       }
     }
     // TODO: figure out the exact expansion of the pure expander.
     const CapacityT inv_phi =
-        CapacityT(std::pow(std::log2(sg_.without_shortcut.n), 2));
-    return std::make_unique<LeafWitness>(expander, inv_phi, 50 * phi_, sg_,
+        CapacityT(std::pow(std::log2(sg_[0].without_shortcut.n), 2));
+    return std::make_unique<LeafWitness>(expander, inv_phi, 50 * phi_, sg_[0],
                                          expander_edge_map, fd_);
   }
 
  private:
-  ShortcutGraph sg_;
+  std::array<ShortcutGraph, 2> sg_;
   CapacityT phi_;
-  std::vector<FlowDecomposition> fd_;
+  std::vector<std::array<FlowDecomposition, 2>> fd_;
 };
 
 }  // namespace

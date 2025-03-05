@@ -122,7 +122,9 @@ std::optional<std::vector<bool>> NonStopCutMatchingGame::DoRound() {
     bipartition[v] = (source[v] <= sink[v]);
   }
 
-  auto [cut, matching] = matching_player_->Match(subdemand, bipartition);
+  // TODO: Now Match returns a matching in both directions.
+  auto [cut, matching_] = matching_player_->Match(subdemand, bipartition);
+  auto matching = matching_[0];
 
   CapacityT demand_S = 0;
   for (Vertex v = 0; v < n_; ++v)

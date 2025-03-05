@@ -16,6 +16,13 @@ struct ShortcutGraph {
   // star edge.
   std::vector<Edge> edge_map;
 
+  ShortcutGraph Reverse() const {
+    auto res = *this;
+    res.without_shortcut = res.without_shortcut.Reverse();
+    res.shortcut = res.shortcut.Reverse();
+    return res;
+  }
+
   enum StarEdgeDirection : uint8_t { kToStar = 0, kFromStar = 1 };
 
   // map each star edge to its level and its vertex; only entries corresponding
