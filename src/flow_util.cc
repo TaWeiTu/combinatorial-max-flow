@@ -262,11 +262,7 @@ struct U {
 std::vector<CapacityT> FlowRoundingExact(const Graph &g,
                                          const std::vector<CapacityT> &flow,
                                          CapacityT scale) {
-  std::vector<CapacityT> demand(g.n);
-  for (Edge e : g.Edges()) {
-    demand[g.tail[e]] += flow[e];
-    demand[g.head[e]] -= flow[e];
-  }
+  auto demand = FlowToDemand(g, flow);
   assert(std::ranges::all_of(g.Vertices(),
                              [&](Vertex v) { return demand[v] % scale == 0; }));
 

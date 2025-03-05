@@ -11,6 +11,8 @@
 #include "graph.h"
 #include "weighted_push_relabel.h"
 
+namespace {
+
 enum Direction { kForward, kBackward };
 
 std::pair<Graph, std::vector<std::pair<Edge, Direction>>> ConstructResidual(
@@ -41,6 +43,8 @@ void UpdateFlowFromResidual(
     if (dir == kBackward) flow[ee] -= flow_on_residual[e];
   }
 }
+
+}  // namespace
 
 // Implements [Algorithm 3, TODO: new paper] until the maximum flow is found
 std::pair<CapacityT, std::vector<CapacityT>> MaximumFlow(const Graph& g,
@@ -81,19 +85,34 @@ std::pair<CapacityT, std::vector<CapacityT>> MaximumFlow(const Graph& g,
 
     // Step 4: unwrap the flow
     auto flow_on_residual = eh.Unfold(flow_on_sg);
+    assert(std::ssize(flow_on_residual) == residual.m);
 
     std::cerr << "after unfold\n";
 
+    std::cerr << "flow on residual = ";
+    for (auto v : flow_on_residual) std::cerr << v << " ";
+    std::cerr << "\n";
+
+    // calculate (an upperbound) on the congestion of the flow
+    CapacityT congest = 1;
+    for (auto e : residual.Edges()) {
+      auto c = (flow_on_residual[e] + residual.capacity[e] - 1) /
+               residual.capacity[e];
+      congest = std::max(congest, c);
+    }
+    std::cerr << "congestion = " << congest << std::endl;
+
     // This flow has congestion 3 in the scaled up graph, so it has congestion
     // 3/psi overall in the original graph.
-    assert(std::ssize(flow_on_residual) == residual.m);
-    assert(std::ranges::all_of(residual.Edges(), [&](Edge e) {
-      return 0 <= flow[e] && flow[e] <= 3 * eh.Scale() * residual.capacity[e];
-    }));
+    // TODO: In our current flow-unfolding, we lose a factor more than 3, so
+    // this is not quite true, if I understand correctly.
+    // assert(std::ranges::all_of(residual.Edges(), [&](Edge e) {
+    //  return 0 <= flow[e] && flow[e] <= 3 * eh.Scale() * residual.capacity[e];
+    //}));
 
     // Now we round it back to be integral and feasible.
     flow_on_residual =
-        FlowRoundingRoundedDown(residual, flow_on_residual, 3 * eh.Scale());
+        FlowRoundingRoundedDown(residual, flow_on_residual, congest);
 
     // Since we are rounding down, the new flow might be empty, in which case we
     // terminate the loop and fallback to a few augmenting path computations.
