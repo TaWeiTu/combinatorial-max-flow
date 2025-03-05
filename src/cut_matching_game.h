@@ -8,11 +8,12 @@
 
 class MatchingPlayer {
  public:
-  // returns [cut, matchings, scale].
+  // returns [{(cut[0], matching[0]), (cut[1], matching[1])}, scale].
   // the matchings are scaled up by scale
-  virtual std::tuple<
-      std::vector<bool>,
-      std::array<std::vector<std::tuple<Vertex, Vertex, CapacityT>>, 2>,
+  virtual std::pair<
+      std::array<std::pair<std::vector<bool>,
+                           std::vector<std::tuple<Vertex, Vertex, CapacityT>>>,
+                 2>,
       CapacityT>
   Match(const std::vector<CapacityT> &subdemand,
         const std::vector<bool> &bipartition) = 0;

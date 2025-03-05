@@ -163,9 +163,11 @@ class MatchingPlayerImpl : public MatchingPlayer {
   MatchingPlayerImpl(const ShortcutGraph &sg, CapacityT phi)
       : MatchingPlayer(), sg_({sg, sg.Reverse()}), phi_(phi) {}
   ~MatchingPlayerImpl() = default;
-  std::tuple<std::vector<bool>,
-             std::array<std::vector<std::tuple<Vertex, Vertex, CapacityT>>, 2>,
-             CapacityT>
+  std::pair<
+      std::array<std::pair<std::vector<bool>,
+                           std::vector<std::tuple<Vertex, Vertex, CapacityT>>>,
+                 2>,
+      CapacityT>
   Match(const std::vector<CapacityT> &subdemand,
         const std::vector<bool> &bipartition) {
     const int n = sg_[0].without_shortcut.n;
@@ -174,29 +176,22 @@ class MatchingPlayerImpl : public MatchingPlayer {
       demand[v] = bipartition[v] ? -subdemand[v] : subdemand[v];
     }
     auto &fd = fd_.emplace_back();
-    std::vector<bool> cut(n);
-    std::array<std::vector<std::tuple<Vertex, Vertex, CapacityT>>, 2> matching;
+    std::array<std::pair<std::vector<bool>,
+                         std::vector<std::tuple<Vertex, Vertex, CapacityT>>>,
+               2>
+        cut_and_matching;
     for (int rev = 0; rev < 2; ++rev) {
       auto [value, flow, c] =
           WeightedPushRelabelOnShortcut(sg_[rev], demand, 50 * phi_);
-      for (Vertex v = 0; v < n; ++v) cut[v] = cut[v] || c[v];
-      // cut[v] = cut[v] || (!bipartition[v] && c[v]);
-      // TODO: now we (incorrectly) return the actual cut, and not just the cut
-      // on the subset on the source side. This is so that the CMG can return
-      // forward the cut (if it just had the cut restricted to the source side,
-      // that cut might no longer be sparse (and let to infinite recursion in
-      // the expander hierarchy)). One potential problem right now is that if we
-      // find a out-sparse and in-sparse cut seperately, and then return the
-      // union cut it is neither out- nor in-sparse. Likely we need to return
-      // the two cuts seperately...
+      cut_and_matching[rev].first = c;
       fd[rev] = FlowDecomposition(sg_[rev].shortcut, flow);
       for (auto [k, v] : fd[rev].Demand()) {
         auto tail = k.first, head = k.second;
         if (rev) std::swap(tail, head);
-        matching[rev].emplace_back(tail, head, v);
+        cut_and_matching[rev].second.emplace_back(tail, head, v);
       }
     }
-    return std::make_tuple(cut, matching, sg_[0].scale);
+    return std::make_pair(cut_and_matching, sg_[0].scale);
   }
 
   std::unique_ptr<Witness> ExtractWitness() {

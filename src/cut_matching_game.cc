@@ -154,37 +154,47 @@ std::optional<std::vector<bool>> NonStopCutMatchingGame::DoRound() {
     bipartition[v] = (source[v] <= sink[v]);
   }
 
-  auto [cut, matching_bidir, scale] =
+  auto [cut_and_matching, scale] =
       matching_player_->Match(subdemand, bipartition);
+
+  // Check if one of the cuts is balanced.
+  for (int rev = 0; rev < 2; ++rev) {
+    CapacityT demand_S = 0;
+    for (Vertex v = 0; v < n_; ++v)
+      if (cut_and_matching[rev].first[v]) demand_S += demand_[v];
+
+    // TODO: check balance factor and constants
+    const CapacityT balance_factor = 10 * rounds_;
+    if (balance_factor * demand_S >= total_demand_) {
+      // found a reasonably balanced cut, return early
+      assert(count(cut_and_matching[rev].first.begin(),
+                   cut_and_matching[rev].first.end(), false) &&
+             count(cut_and_matching[rev].first.begin(),
+                   cut_and_matching[rev].first.end(), true) &&
+             "must be non-trivial cut");
+      return cut_and_matching[rev].first;
+    }
+  }
 
   // To certify both out and in expansion, we multiply the matchings (both
   // directions) both to the front and back of the flow matrix F.
   // TODO: verify if this is correct.
   //  (at least it makes the flow matrix look uniform at the end)
   std::vector<std::tuple<Vertex, Vertex, D>> matching;
-  for (const auto &[x, y, c] : matching_bidir | std::views::join) {
-    matching.emplace_back(x, y, D(c) / D(scale));
+  for (int rev = 0; rev < 2; ++rev) {
+    for (const auto &[x, y, c] : cut_and_matching[rev].second) {
+      matching.emplace_back(x, y, D(c) / D(scale));
+    }
   }
   matchings_.emplace_back(matching);
   matchings_.emplace_front(matching);
 
-  CapacityT demand_S = 0;
-  for (Vertex v = 0; v < n_; ++v)
-    if (cut[v]) demand_S += demand_[v];
-
-  // TODO: check balance factor and constants
-  const CapacityT balance_factor = 10 * rounds_;
-  if (balance_factor * demand_S >= total_demand_) {
-    // found a reasonably balanced cut, return early
-    assert(count(cut.begin(), cut.end(), false) &&
-           count(cut.begin(), cut.end(), true) && "must be non-trivial cut");
-    return cut;
-  }
-
   // remove small cut S from alive vertices A_
   // TODO: check: is this the correct thing to do, or do we only decrease
   // the "alive" demand by source+sink on the S-side?
-  std::remove_if(A_.begin(), A_.end(), [&](Vertex v) { return cut[v]; });
+  std::ignore = std::remove_if(A_.begin(), A_.end(), [&](Vertex v) {
+    return cut_and_matching[0].first[v] || cut_and_matching[1].first[v];
+  });
 
   // return no balanced cut, signaling that the cmg should continue
   return {};
