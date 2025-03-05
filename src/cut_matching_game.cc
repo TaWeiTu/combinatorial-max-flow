@@ -29,7 +29,7 @@ class NonStopCutMatchingGame {
   const CapacityT total_demand_;
 
   std::vector<Vertex> A_;  // alive vertices
-  std::vector<std::vector<std::tuple<Vertex, Vertex, CapacityT>>> matchings_;
+  std::vector<std::vector<std::tuple<Vertex, Vertex, D>>> matchings_;
 
   std::mt19937_64 rng_gen_;
   std::normal_distribution<D> gaussian_;
@@ -68,7 +68,11 @@ std::vector<D> NonStopCutMatchingGame::ProjectByF(std::vector<D> r) {
     auto old_r = r;
     for (const auto &[x, y, c] : M_i) {
       // TODO: this does not quite seem correct to me, double check!
-      r[x] += c * (old_r[x] / demand_[x] - old_r[y] / demand_[y]) / 2;
+      // r[x] += c * (old_r[x] / demand_[x] - old_r[y] / demand_[y]) / 2;
+      // auto flow = c * (old_r[x] / demand_[x] - old_r[y] / demand_[y]) / 2;
+      auto flow = c / 2.0;
+      r[y] -= flow;
+      r[x] += flow;
     }
   }
   for (int v = 0; v < n_; ++v) r[v] /= demand_[v];
@@ -93,10 +97,10 @@ std::optional<std::vector<bool>> NonStopCutMatchingGame::DoRound() {
   auto r = RandomVectorOrthogonalToOne();
   auto p = ProjectByF(r);
   std::ranges::sort(A_, {}, [&](Vertex v) { return p[v]; });
+
   // having the source be a prefix and sink suffix OR vice versa leads to
-  // potential decrease. Instead of doing something smart to decide which, we
-  // simply guess, and are right half of the time. TODO: verify that this works.
-  if (rng_gen_() % 2) std::ranges::reverse(A_);
+  // potential decrease. If we simply assume the prefix is the source, we are
+  // right half of the time. TODO: verify that this works.
 
   CapacityT demand_A = 0;
   for (auto v : A_) demand_A += demand_[v];
@@ -123,8 +127,13 @@ std::optional<std::vector<bool>> NonStopCutMatchingGame::DoRound() {
   }
 
   // TODO: Now Match returns a matching in both directions.
-  auto [cut, matching_] = matching_player_->Match(subdemand, bipartition);
-  auto matching = matching_[0];
+  auto [cut, matching_bidir, scale] =
+      matching_player_->Match(subdemand, bipartition);
+  matchings_.emplace_back();
+  for (const auto &m : matching_bidir) {
+    for (const auto &[x, y, c] : m)
+      matchings_.back().emplace_back(x, y, D(c) / D(scale));
+  }
 
   CapacityT demand_S = 0;
   for (Vertex v = 0; v < n_; ++v)
@@ -138,8 +147,6 @@ std::optional<std::vector<bool>> NonStopCutMatchingGame::DoRound() {
            count(cut.begin(), cut.end(), true) && "must be non-trivial cut");
     return cut;
   }
-
-  matchings_.emplace_back(matching);
 
   // remove small cut S from alive vertices A_
   // TODO: check: is this the correct thing to do, or do we only decrease

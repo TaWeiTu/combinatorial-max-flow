@@ -53,6 +53,8 @@ std::vector<CapacityT> FlowUnfolding::Unfold(
             flow_on_shortcut[sg_[l].StarEdge(i, v, ShortcutGraph::kFromStar)];
       }
     }
+    // also keep flow on original edges
+    for (Edge e : g_.Edges()) reroute[e] += flow_on_shortcut[e];
     flow_on_shortcut = reroute;
   }
   assert(std::ssize(flow_on_shortcut) == g_.m);

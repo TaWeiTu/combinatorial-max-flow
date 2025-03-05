@@ -62,6 +62,8 @@ std::pair<CapacityT, std::vector<CapacityT>> MaximumFlow(const Graph& g,
     // Step 1: calculate the residual graph from the current flow
     auto [residual, edge_map] = ConstructResidual(g, flow);
 
+    std::cerr << "residual:\n" << residual << std::endl;
+
     // Step 2: build the expander hierarchy
     ExpanderHierarchy eh(residual);
 
@@ -88,6 +90,7 @@ std::pair<CapacityT, std::vector<CapacityT>> MaximumFlow(const Graph& g,
     assert(std::ranges::all_of(residual.Edges(), [&](Edge e) {
       return 0 <= flow[e] && flow[e] <= 3 * eh.Scale() * residual.capacity[e];
     }));
+
     // Now we round it back to be integral and feasible.
     flow_on_residual =
         FlowRoundingRoundedDown(residual, flow_on_residual, 3 * eh.Scale());

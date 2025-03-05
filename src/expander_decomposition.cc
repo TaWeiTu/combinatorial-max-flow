@@ -161,8 +161,9 @@ class MatchingPlayerImpl : public MatchingPlayer {
   MatchingPlayerImpl(const ShortcutGraph &sg, CapacityT phi)
       : MatchingPlayer(), sg_({sg, sg.Reverse()}), phi_(phi) {}
   ~MatchingPlayerImpl() = default;
-  std::pair<std::vector<bool>,
-            std::array<std::vector<std::tuple<Vertex, Vertex, CapacityT>>, 2>>
+  std::tuple<std::vector<bool>,
+             std::array<std::vector<std::tuple<Vertex, Vertex, CapacityT>>, 2>,
+             CapacityT>
   Match(const std::vector<CapacityT> &subdemand,
         const std::vector<bool> &bipartition) {
     const int n = sg_[0].without_shortcut.n;
@@ -185,7 +186,7 @@ class MatchingPlayerImpl : public MatchingPlayer {
         matching[rev].emplace_back(tail, head, v);
       }
     }
-    return std::make_pair(cut, matching);
+    return std::make_tuple(cut, matching, sg_[0].scale);
   }
 
   std::unique_ptr<Witness> ExtractWitness() {
