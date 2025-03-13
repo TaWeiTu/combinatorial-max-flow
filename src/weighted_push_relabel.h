@@ -44,6 +44,5 @@ WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
 // f(e) <= k * O(log n / phi) * c(e).
 // The running time is O(n log^2 n / phi), given that the graph is actually a
 // phi-expander.
-// TODO: double check congestion and running time guarantees
-std::vector<CapacityT> PushRelabelOnExpander(Graph expander, int inv_phi,
+std::vector<CapacityT> PushRelabelOnExpander(Graph expander,
                                              std::vector<CapacityT> demand);

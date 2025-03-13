@@ -193,23 +193,38 @@ WeightedPushRelabel(Graph g, std::vector<CapacityT> demand,
   }
 }
 
-std::vector<CapacityT> PushRelabelOnExpander(Graph expander, int inv_phi,
+std::vector<CapacityT> PushRelabelOnExpander(Graph expander,
                                              std::vector<CapacityT> demand) {
-  CapacityT total_demand = std::accumulate(
-      demand.begin(), demand.end(), CapacityT(0),
-      [](auto a, auto b) { return a + std::max<CapacityT>(b, 0); });
+  std::vector<CapacityT> vol(expander.n, 0);
+  for (Edge e : expander.Edges()) {
+    vol[expander.head[e]] += expander.capacity[e];
+    vol[expander.tail[e]] += expander.capacity[e];
+  }
+  CapacityT total_demand = 0, k_respecting = 1;
+  for (Vertex v : expander.Vertices()) {
+    total_demand += std::max<CapacityT>(0, demand[v]);
+    if (demand[v]) {
+      assert(vol[v] > 0);
+      k_respecting =
+          std::max(k_respecting, (std::abs(demand[v]) + vol[v] - 1) / vol[v]);
+    }
+  }
+  expander = expander * k_respecting;  // now demand is 1-respecting
   std::vector<WeightT> weights(expander.m, 1);
   std::vector<CapacityT> flow(expander.m);
-  // TODO: figure out the right h
-  WeightT h = WeightT(10 * inv_phi * log2(expander.n));
+  WeightT h = 1;
   while (total_demand > 0) {
     auto [v, f, rd] = WeightedPushRelabel(expander, demand, weights, h);
+    if (2 * v < total_demand) {
+      // double h until it becomes >= 1/phi,
+      // in which case we are guaranteed to route half of the demand.
+      h *= 2;
+      continue;
+    }
     for (Edge e : expander.Edges()) flow[e] += f[e];
     demand = rd;
     total_demand -= v;
-    if (v == 0) {
-      assert(total_demand == 0);
-    }
+    assert(v > 0 || total_demand == 0);
   }
   return flow;
 }
@@ -228,11 +243,13 @@ WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
   for (auto &d : demand) d *= sg.scale;
 
   CapacityT total_capacity = 0;
-  for (auto e : g.Edges()) total_capacity += sg.without_shortcut.capacity[e];
+  for (auto e : g.Edges())
+    if (sg.IsTopLevelEdge(e)) total_capacity += sg.without_shortcut.capacity[e];
 
   // TODO: verify that h is set correctly
   WeightT h = std::max<WeightT>(
-      1, g.n * (6 * (sg.L + 2) * sg.scale + 10 * kappa * log2(total_capacity)));
+      1, g.n * (6 * (sg.L + 2) * sg.scale +
+                10 * kappa * log2(std::max<CapacityT>(1, total_capacity))));
   // faster for small graphs to limit h to n * w_max
   if (!w.empty()) h = std::min(h, g.n * std::ranges::max(w));
 

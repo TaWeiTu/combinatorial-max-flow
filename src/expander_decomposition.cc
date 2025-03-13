@@ -55,8 +55,7 @@ class LeafWitness : public Witness {
       auto [x, y, c] = expander_.EdgeInfo(e);
       std::cerr << x << " -> " << y << ": " << c << "\n";
     }
-    auto flow_on_expander =
-        PushRelabelOnExpander(expander_, phi_, scaled_up_demand);
+    auto flow_on_expander = PushRelabelOnExpander(expander_, scaled_up_demand);
     std::cerr << "done push-relabel on expander\n";
     assert(FlowToDemand(expander_, flow_on_expander) == scaled_up_demand);
     assert(std::ranges::all_of(expander_.Edges(), [&](Edge e) {
