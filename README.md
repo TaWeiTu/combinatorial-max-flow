@@ -9,10 +9,10 @@ This repository contains an implementation of maximum flow on directed graphs wi
 
 The implementation is based on the following papers:
 * [[BBST24]](#BBST24): Maximum Flow by Augmenting Paths in $n^{2+o(1)}$ Time.
-* [[BBJST25]](#BBJST25): A forthcoming paper that significantly simplifies the above (citation will be added once published).
+* [[BBLST25]](#BBLST25): A forthcoming paper that significantly simplifies the above (citation will be added once published).
 
 ## Details
-For complete details, please refer to [[BBJST25]](#BBJST25) (which builds upon [[BBST24]](#BBST24)). A brief overview of the algorithm follows:
+For complete details, please refer to [[BBLST25]](#BBLST25) (which builds upon [[BBST24]](#BBST24)). A brief overview of the algorithm follows:
 
 > [!NOTE]
 > While our implementation is complete, it uses parameter settings that differ from those specified in the papers. These modifications appear to improve performance (at least on small graphs), as implementing the exact parameters from the paper would be impractical due to the $\log^{25}(n)$ factor.
@@ -33,7 +33,7 @@ then we achieve the desired $\tilde{O}(n^2)$ running time.
 The weighted push relabel algorithm itself is relatively simple and efficient in practice. The challenge lies in constructing edge lengths with the desired properties.
 
 ### Expander Hierarchy
-Both papers construct these hints (edge lengths $w$) by building an expander hierarchy on the graph. The construction in [[BBST24]](#BBST24) involves a complex approach, while [[BBJST25]](#BBJST25) significantly simplifies this by introducing shortcuts. Our implementation follows the latter approach.
+Both papers construct these hints (edge lengths $w$) by building an expander hierarchy on the graph. The construction in [[BBST24]](#BBST24) involves a complex approach, while [[BBLST25]](#BBLST25) significantly simplifies this by introducing shortcuts. Our implementation follows the latter approach.
 
 The final algorithm finds a flow not on the original graph $G$, but on $G \cup A$ where $A$ is a set of "expanding" shortcuts. As a post-processing step, the algorithm "unfolds" this flow back to $G$ with only an $O(1)$ loss in the approximation factor.
 
@@ -62,4 +62,4 @@ FOCS 2024. <br>
 [[slides for a high-level overview]](https://blikstad.gitlab.io/slides/Combinatorial_Maximum_Flow.pdf)
 [[video 30min]](https://youtu.be/K3RgpJmgmUI)
 
-* **[BBJST25]** <br> <a name="BBJST25"></a> *Citation will be added when the paper becomes public.*
+* **[BBLST25]** <br> <a name="BBLST25"></a> *Citation will be added when the paper becomes public.*
