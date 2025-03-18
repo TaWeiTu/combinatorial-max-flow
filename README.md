@@ -1,3 +1,4 @@
+
 # Combinatorial Maximum Flow
 This repository contains an implementation of maximum flow on directed graphs with a theoretical time complexity of $\tilde{O}(n^2)$.
 
@@ -7,7 +8,7 @@ This repository contains an implementation of maximum flow on directed graphs wi
 > The repository serves as a proof of concept demonstrating that the $\tilde{O}(n^2)$ algorithm can be implemented. To our knowledge, few (if any) maximum flow algorithms with theoretical running times faster than Goldberg-Rao's (1997) classic $\tilde{O}(\min(\sqrt{m},n^{2/3})m)$ algorithm have been fully implemented, due to their reliance on complex data structures and continuous optimization techniques.
 
 The implementation is based on the following papers:
-* [[BBST24]](#BBST24): Maximum Flow by Augmenting Paths in $n^{1+o(1)}$ Time.
+* [[BBST24]](#BBST24): Maximum Flow by Augmenting Paths in $n^{2+o(1)}$ Time.
 * [[BBJST25]](#BBJST25): A forthcoming paper that significantly simplifies the above (citation will be added once published).
 
 ## Details
@@ -53,12 +54,12 @@ cmake --build build -j 8 --target test
 ```
 
 ## References
-* [BBST24] <a name="BBST24"></a> *Maximum Flow by Augmenting Paths in $n^{2+o(1)}$ Time.*
-Aaron Bernstein, Joakim Blikstad, Thatchaphol Saranurak, Ta-Wei Tu. 
-FOCS 2024.
+* **[BBST24]** <br> <a name="BBST24"></a> Maximum Flow by Augmenting Paths in $n^{2+o(1)}$ Time. <br>
+Aaron Bernstein, Joakim Blikstad, Thatchaphol Saranurak, Ta-Wei Tu. <br>
+FOCS 2024. <br>
 [[arxiv]](https://arxiv.org/abs/2406.03648)
 [[proceedings]](https://doi.org/10.1109/FOCS61266.2024.00123)
 [[slides for a high-level overview]](https://blikstad.gitlab.io/slides/Combinatorial_Maximum_Flow.pdf)
 [[video 30min]](https://youtu.be/K3RgpJmgmUI)
 
-* [BBJST25] <a name="BBJST25"></a> *Citation will be added when the paper becomes public.*
+* **[BBJST25]** <br> <a name="BBJST25"></a> *Citation will be added when the paper becomes public.*
