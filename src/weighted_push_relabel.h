@@ -23,7 +23,7 @@ WeightedPushRelabel(Graph g, std::vector<CapacityT> demand,
                     const std::vector<WeightT> w, WeightT h);
 
 // weighted push-relabel on shortcut graph
-// implements [Lemma 4.1]
+// implements [Lemma 4.1, TODO: cite new paper]
 //
 // returns:
 //   1. amount of flow routed (scaled by both sg.scale and kappa).

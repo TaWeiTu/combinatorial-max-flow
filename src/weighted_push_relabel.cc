@@ -229,16 +229,14 @@ std::vector<CapacityT> PushRelabelOnExpander(Graph expander,
   return flow;
 }
 
-// Implements [Lemma 4.1 (Algorithm 1), TODO: new paper]
-// TODO: note, returns the flow scaled up by scale
-//
+// Implements [Lemma 4.1 (Algorithm 1), TODO: cite new paper]
+// NOTE: returns a scaled up flow
 std::tuple<CapacityT, std::vector<CapacityT>, std::vector<bool>>
 WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
                               CapacityT kappa) {
   // Run weighted push relabel on the scaled up instance
   Graph g = sg.shortcut * kappa;
   auto w = sg.weights;
-  // TODO: check if the demand is already scaled up?
   demand.resize(g.n);
   for (auto &d : demand) d *= sg.scale;
 
@@ -260,7 +258,6 @@ WeightedPushRelabelOnShortcut(ShortcutGraph sg, std::vector<CapacityT> demand,
   for (auto d : demand) (d > 0 ? total_source : total_sink) += d;
 
   if (flow_value == std::min(total_source, total_sink)) {
-    // TODO: how should the cut look like here?
     return {flow_value, flow, std::vector(sg.without_shortcut.n, false)};
   }
 

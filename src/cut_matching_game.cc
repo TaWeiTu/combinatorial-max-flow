@@ -70,9 +70,6 @@ std::vector<D> NonStopCutMatchingGame::ProjectByF(std::vector<D> r) {
   for (const auto &M_i : matchings_) {
     auto old_r = r;
     for (const auto &[x, y, c] : M_i) {
-      // TODO: this does not quite seem correct to me, double check!
-      // r[x] += c * (old_r[x] / demand_[x] - old_r[y] / demand_[y]) / 2;
-      // auto flow = c * (old_r[x] / demand_[x] - old_r[y] / demand_[y]) / 2;
       auto flow = c / D(2 * demand_[x]) * old_r[x];
       r[x] -= flow;
       r[y] += flow;
@@ -125,26 +122,6 @@ std::optional<std::vector<bool>> NonStopCutMatchingGame::DoRound() {
 
   auto source = TakePrefix(demand_A / 8, A_.begin());
   auto sink = TakePrefix((demand_A + 1) / 2, A_.rbegin());
-
-  if (false) {  // TODO: remove debug info
-    std::cerr << "F=\n";
-    for (auto i : std::views::iota(0, n_)) {
-      std::vector<D> ei(n_);
-      ei[i] = 1;
-      ei = ProjectByF(ei);
-      for (auto a : ei) std::cerr << a << " ";
-      std::cerr << std::endl;
-    }
-    std::cerr << "d[";
-    for (auto a : demand_) std::cerr << a << " ";
-    std::cerr << "]\n";
-    std::cerr << "s[";
-    for (auto a : source) std::cerr << a << " ";
-    std::cerr << "]\n";
-    std::cerr << "t[";
-    for (auto a : sink) std::cerr << a << " ";
-    std::cerr << "]\n";
-  }
 
   std::vector<bool> bipartition(n_);
   std::vector<CapacityT> subdemand(n_);

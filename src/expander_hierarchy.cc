@@ -39,9 +39,7 @@ std::vector<CapacityT> FlowUnfolding::Unfold(
       demand[v] -=
           flow_on_shortcut[sg_[l].StarEdge(l - 1, v, ShortcutGraph::kFromStar)];
     }
-    std::cerr << "start routing\n";
     auto reroute = witness_[l - 1]->Route(demand);
-    std::cerr << "done routing\n";
     assert(std::ssize(reroute) == sg_[l - 1].shortcut.m &&
            "rerouted on lower level shortcut graph");
     // map lower-level star edges as well
@@ -58,7 +56,6 @@ std::vector<CapacityT> FlowUnfolding::Unfold(
     flow_on_shortcut = reroute;
   }
   assert(std::ssize(flow_on_shortcut) == g_.m);
-  std::cerr << "here\n";
   return FlowRoundingExact(g_, flow_on_shortcut, L);
 }
 
@@ -72,11 +69,10 @@ std::pair<std::vector<int>, FlowUnfolding> BuildExpanderHierarchy(Graph g) {
   const int L = CapacityT(std::ceil(std::log2(total_capacity) /
                                     std::log2(double(4) / 3))) +
                 1;
-  // TODO: Check these values.
+  // TODO: Check that these parameters are set correctly
   const CapacityT inv_phi = CapacityT(std::pow(std::log2(g.n), 8));
   // This corresopnds to 1/psi in the paper.
   const CapacityT scale = L * 500 * inv_phi;
-  std::cerr << "inv_phi = " << inv_phi << " psi = " << scale << "\n";
   FlowUnfolding fu(g, scale, inv_phi);
   while (true) {
     auto [new_level, witness, sg] = ExpanderDecomposition(g, level, scale);
@@ -84,9 +80,6 @@ std::pair<std::vector<int>, FlowUnfolding> BuildExpanderHierarchy(Graph g) {
     if (level == new_level) break;
     level = new_level;
   }
-  std::cerr << "level[";
-  for(auto a : level) std::cerr << a << " ";
-  std::cerr << "]\n";
   fu.AddLevel(ShortcutGraph(g, level, scale, /*skip_top_level=*/false),
               nullptr);
   return std::make_pair(level, std::move(fu));

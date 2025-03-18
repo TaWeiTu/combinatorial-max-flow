@@ -47,16 +47,7 @@ class LeafWitness : public Witness {
     // To make things integral, route the scaled up demand first instead.
     auto scaled_up_demand = demand;
     for (auto &v : scaled_up_demand) v *= scale_;
-    std::cerr << "scaled_up_demand = ";
-    for (auto &v : scaled_up_demand) std::cerr << v << " ";
-    std::cerr << "\n";
-    std::cerr << "witness = \n";
-    for (Edge e : expander_.Edges()) {
-      auto [x, y, c] = expander_.EdgeInfo(e);
-      std::cerr << x << " -> " << y << ": " << c << "\n";
-    }
     auto flow_on_expander = PushRelabelOnExpander(expander_, scaled_up_demand);
-    std::cerr << "done push-relabel on expander\n";
     assert(FlowToDemand(expander_, flow_on_expander) == scaled_up_demand);
     assert(std::ranges::all_of(expander_.Edges(), [&](Edge e) {
       // TODO: this 10 should be an O(log n) term.
@@ -83,9 +74,6 @@ class LeafWitness : public Witness {
         for (Edge e : sg_.shortcut.Edges()) flow[e] += f[e];
       }
     }
-    std::cerr << "flow = ";
-    for (auto &v : flow) std::cerr << v << " ";
-    std::cerr << "\n";
     // Now, scale the flow back down.
     return FlowRoundingExact(sg_.shortcut, flow, scale_);
   }
