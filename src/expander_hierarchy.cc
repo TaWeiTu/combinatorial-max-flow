@@ -7,11 +7,21 @@
 
 #include "flow_util.h"
 
-void FlowUnfolding::AddLevel(ShortcutGraph sg,
-                             std::unique_ptr<Witness> witness) {
+void FlowUnfolding::AddLevel(ShortcutGraph sg, std::vector<int> expanders) {
   sg_.push_back(sg);
-  witness_.push_back(std::move(witness));
+  expanders_.push_back(expanders);
 }
+
+namespace {
+
+std::vector<CapacityT> ReRoute(const std::vector<CapacityT>& demand,
+                               const ShortcutGraph& sg,
+                               const std::vector<int>& expanders) {
+  // TODO: Implement re-routing by calling weighted push-relabel.
+  return {};
+}
+
+}  // namespace
 
 std::vector<CapacityT> FlowUnfolding::Unfold(
     std::vector<CapacityT> flow_on_shortcut) {
@@ -39,7 +49,8 @@ std::vector<CapacityT> FlowUnfolding::Unfold(
       demand[v] -=
           flow_on_shortcut[sg_[l].StarEdge(l - 1, v, ShortcutGraph::kFromStar)];
     }
-    auto reroute = witness_[l - 1]->Route(demand);
+    auto reroute = ReRoute(demand, sg_[l - 1], expanders_[l - 1]);
+    // auto reroute = witness_[l - 1]->Route(demand);
     assert(std::ssize(reroute) == sg_[l - 1].shortcut.m &&
            "rerouted on lower level shortcut graph");
     // map lower-level star edges as well
@@ -80,8 +91,7 @@ std::pair<std::vector<int>, FlowUnfolding> BuildExpanderHierarchy(Graph g) {
     if (level == new_level) break;
     level = new_level;
   }
-  fu.AddLevel(ShortcutGraph(g, level, scale, /*skip_top_level=*/false),
-              nullptr);
+  fu.AddLevel(ShortcutGraph(g, level, scale, /*skip_top_level=*/false), {});
   return std::make_pair(level, std::move(fu));
 }
 

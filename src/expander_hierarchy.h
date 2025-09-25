@@ -10,7 +10,7 @@ class FlowUnfolding {
   FlowUnfolding() = default;
   FlowUnfolding(Graph g, CapacityT scale, CapacityT inv_phi)
       : g_(g), scale_(scale), inv_phi_(inv_phi) {}
-  void AddLevel(ShortcutGraph sg, std::unique_ptr<Witness> witness);
+  void AddLevel(ShortcutGraph sg, std::vector<int> expanders);
 
   // Unfold the flow on the shortcut graph back to the original graph.
   // NOTE: the flow_on_shortcut is already scaled up by a factor of 1/psi.
@@ -20,7 +20,7 @@ class FlowUnfolding {
   CapacityT Scale() const { return scale_; }
 
  private:
-  std::vector<std::unique_ptr<Witness>> witness_;
+  std::vector<std::vector<int>> expanders_;
   std::vector<ShortcutGraph> sg_;
   Graph g_;
   CapacityT scale_, inv_phi_;
