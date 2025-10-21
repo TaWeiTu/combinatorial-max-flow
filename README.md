@@ -3,13 +3,16 @@
 This repository contains an implementation of maximum flow on directed graphs with a theoretical time complexity of $\tilde{O}(n^2)$.
 
 > [!NOTE]
-> This implementation is primarily academic and not optimized for practical performance on larger maximum flow instances. The $\tilde{O}$-notation conceals a substantial $\log^{25}(n)$ factor, resulting in an actual theoretical running time of $O(n^2 \log^{25}(n))$.
+> This implementation is primarily academic and not optimized for practical performance on larger maximum flow instances. The $\tilde{O}$-notation conceals a substantial $\log^{19}(n)$ factor, resulting in an actual theoretical running time of $O(n^2 \log^{19}(n))$.
 >
 > The repository serves as a proof of concept demonstrating that the $\tilde{O}(n^2)$ algorithm can be implemented. To our knowledge, few (if any) maximum flow algorithms with theoretical running times faster than Goldberg-Rao's (1997) classic $\tilde{O}(\min(\sqrt{m},n^{2/3})m)$ algorithm have been fully implemented, due to their reliance on complex data structures and continuous optimization techniques.
 
 The implementation is based on the following papers:
 * [[BBST24]](#BBST24): Maximum Flow by Augmenting Paths in $n^{2+o(1)}$ Time.
-* [[BBLST25]](#BBLST25): A forthcoming paper that significantly simplifies the above (citation will be added once published).
+* [[BBLST25]](#BBLST25): Combinatorial Maximum Flow via Weighted Push-Relabel on Shortcut Graphs.
+
+> [!NOTE]
+> The current repository contains a slightly older and different version of the algorithm compared to the one described in [[BBLST25]](#BBLST25). We will update the implementation shortly.
 
 ## Details
 For complete details, please refer to [[BBLST25]](#BBLST25) (which builds upon [[BBST24]](#BBST24)). A brief overview of the algorithm follows:
@@ -57,9 +60,12 @@ cmake --build build -j 8 --target test
 * **[BBST24]** <br> <a name="BBST24"></a> Maximum Flow by Augmenting Paths in $n^{2+o(1)}$ Time. <br>
 Aaron Bernstein, Joakim Blikstad, Thatchaphol Saranurak, Ta-Wei Tu. <br>
 FOCS 2024. <br>
-[[arxiv]](https://arxiv.org/abs/2406.03648)
+[[arXiv]](https://arxiv.org/abs/2406.03648)
 [[proceedings]](https://doi.org/10.1109/FOCS61266.2024.00123)
 [[slides for a high-level overview]](https://blikstad.gitlab.io/slides/Combinatorial_Maximum_Flow.pdf)
 [[video 30min]](https://youtu.be/K3RgpJmgmUI)
 
-* **[BBLST25]** <br> <a name="BBLST25"></a> *Citation will be added when the paper becomes public.*
+* **[BBLST25]** <br> <a name="BBLST25"></a> Combinatorial Maximum Flow via Weighted Push-Relabel on Shortcut Graphs. <br>
+Aaron Bernstein, Joakim Blikstad, Jason Li, Thatchaphol Saranurak, Ta-Wei Tu. <br>
+FOCS 2025. <br>
+[[arXiv]](https://arxiv.org/abs/2510.17182)
